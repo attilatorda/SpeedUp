@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimizing Binary Search: A Comparative Performance Analysis</title>
+    <style>
+        /* [Keep all your existing CSS styles] */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #2c3e50;
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        /* INCREASED HEADER SPACING */
+        h2 {
+            color: #2c3e50;
+            margin-top: 60px;
+            margin-bottom: 25px;
+            font-size: 1.8em;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 15px;
+        }
+        
+        h3 {
+            color: #34495e;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+        }
+        
+        h4 {
+            color: #2c3e50;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        
+        .authors {
+            font-style: italic;
+            color: #666;
+            margin: 10px 0;
+        }
+        
+        .date {
+            color: #999;
+            font-size: 0.9em;
+        }
+        
+        .abstract {
+            background: #ecf0f1;
+            padding: 20px;
+            margin: 30px 0;
+            border-left: 4px solid #3498db;
+        }
+        
+        .abstract h2 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            margin-top: 0;
+        }
+        
+        p {
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+        
+        code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #e74c3c;
+        }
+        
+        pre {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+            margin: 20px 0;
+            line-height: 1.4;
+            font-size: 0.9em;
+        }
+        
+        pre code {
+            background: none;
+            color: #ecf0f1;
+            padding: 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            font-size: 0.95em;
+        }
+        
+        th {
+            background: #3498db;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-left: 4px solid #ffc107;
+            margin: 20px 0;
+        }
+        
+        .performance-winner {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        
+        .performance-loser {
+            color: #e74c3c;
+        }
+        
+        .key-finding {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        
+        .key-finding h4 {
+            color: #155724;
+            margin-bottom: 10px;
+        }
+        
+        ul, ol {
+            margin: 15px 0 15px 40px;
+        }
+        
+        li {
+            margin: 8px 0;
+        }
+        
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #ecf0f1;
+            text-align: center;
+            color: #999;
+            font-size: 0.9em;
+        }
+        
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .comparison-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .comparison-item h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .impl-summary {
+            margin: 25px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+        
+        .impl-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .impl-card {
+            padding: 20px;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            border: 1px solid #ecf0f1;
+        }
+        
+        .impl-card h4 {
+            margin-top: 0;
+            color: #2c3e50;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Optimizing Binary Search: A Comparative Performance Analysis</h1>
+            <p class="authors">Performance Study on x86-64 Architecture</p>
+            <p class="date">January 2026</p>
+        </header>
+
+        <div class="abstract">
+            <h2>Abstract</h2>
+            <p>
+                Binary search is a fundamental algorithm with O(log n) time complexity, yet its practical performance 
+                varies significantly based on implementation details and data size. This study presents a comprehensive 
+                performance analysis of six binary search implementations on modern x86-64 architecture (AMD Ryzen 5 2600X), 
+                ranging from standard C implementations to hand-optimized assembly with SIMD instructions. Contrary to 
+                common assumptions, we demonstrate that the optimal implementation varies with array size: branchless 
+                assembly excels for small arrays (31.2% faster than reference C at 10K elements), while branching assembly 
+                performs best for large arrays (12.3% faster at 10M elements). Software-pipelined assembly shows consistent 
+                performance across all sizes. SIMD implementations provide mixed results, being competitive at intermediate 
+                sizes but worst-performing at scale.
+            </p>
+        </div>
+
+        <h2>1. Introduction</h2>
+        
+        <p>
+            Binary search is one of the most fundamental algorithms in computer science, with applications ranging from 
+            database indexing to compiler symbol tables. While its algorithmic complexity of O(log n) is well-established, 
+            the constant factors in real-world performance can vary significantly based on implementation choices.
+        </p>
+
+        <!-- [Keep existing sections 1.1, 1.2, 2, 2.1, 2.2] -->
+
+        <h2>2.3 Implementation Summaries</h2>
+
+        <div class="impl-grid">
+            <div class="impl-card">
+                <h4>1. Reference C</h4>
+                <p><strong>Approach:</strong> Standard textbook implementation</p>
+                <p><strong>Optimization:</strong> Compiler optimizations (-O3)</p>
+                <pre><code>while (left <= right) {
+    mid = left + (right - left)/2;
+    if (array[mid] == key) return mid;
+    if (array[mid] < key) 
+        left = mid + 1;
+    else 
+        right = mid - 1;
+}</code></pre>
+                <p><strong>Best for:</strong> Baseline comparison, portability</p>
+            </div>
+            
+            <div class="impl-card">
+                <h4>2. Branching ASM</h4>
+                <p><strong>Approach:</strong> Hand-optimized x86-64 assembly</p>
+                <p><strong>Optimization:</strong> Minimal instructions, branch prediction</p>
+                <pre><code>.search_loop:
+    ; Calculate mid = (left + right) / 2
+    mov rcx, rax
+    add rcx, rbx
+    shr rcx, 1
+    
+    ; Load and compare
+    mov rdx, [r12 + rcx*8]
+    cmp rdx, r13
+    je .found
+    jl .greater
+.less:
+    mov rbx, rcx    ; Update right
+    dec rbx
+    jmp .search_loop</code></pre>
+                <p><strong>Best for:</strong> Large arrays (≥1M elements)</p>
+            </div>
+            
+            <div class="impl-card">
+                <h4>3. Branchless ASM</h4>
+                <p><strong>Approach:</strong> Conditional moves (CMOV)</p>
+                <p><strong>Optimization:</strong> Eliminates branches</p>
+                <pre><code>; Branchless update
+lea rdi, [rcx + 1]  ; mid + 1
+lea rsi, [rcx - 1]  ; mid - 1
+cmovl rax, rdi      ; if array[mid] < key
+cmovg rbx, rsi      ; if array[mid] > key</code></pre>
+                <p><strong>Best for:</strong> Small arrays (≤100K elements)</p>
+            </div>
+            
+            <div class="impl-card">
+                <h4>4. Optimized ASM</h4>
+                <p><strong>Approach:</strong> Software pipelining</p>
+                <p><strong>Optimization:</strong> Prefetches next value</p>
+                <pre><code>.greater_opt:
+    mov rax, rcx    ; Update left
+    inc rax
+    ; Prefetch for next iteration
+    mov rcx, rax
+    add rcx, rbx
+    shr rcx, 1
+    mov rdx, [r12 + rcx*8]
+    jmp .search_loop_opt</code></pre>
+                <p><strong>Best for:</strong> Consistent performance across sizes</p>
+            </div>
+            
+            <div class="impl-card">
+                <h4>5. SIMD AVX2</h4>
+                <p><strong>Approach:</strong> Vectorized comparisons</p>
+                <p><strong>Optimization:</strong> Checks 4 positions simultaneously</p>
+                <pre><code>// Check 4 positions at once
+__m256i values = _mm256_set_epi64x(
+    array[pos[3]], array[pos[2]], 
+    array[pos[1]], array[pos[0]]
+);
+__m256i equal_mask = 
+    _mm256_cmpeq_epi64(values, key_vec);</code></pre>
+                <p><strong>Best for:</strong> Large arrays, with caution</p>
+            </div>
+            
+            <div class="impl-card">
+                <h4>6. SIMD + Optimized</h4>
+                <p><strong>Approach:</strong> Hybrid implementation</p>
+                <p><strong>Optimization:</strong> SIMD for large ranges + scalar for final</p>
+                <pre><code>// Phase 1: SIMD for large ranges
+while (right - left > 32) {
+    // SIMD comparison
+}
+// Phase 2: Scalar for remaining
+while (left <= right) {
+    // Software-pipelined search
+}</code></pre>
+                <p><strong>Performance:</strong> Generally not recommended</p>
+            </div>
+        </div>
+
+        <h2>3. Results</h2>
+
+        <h3>3.1 Performance Comparison (All Array Sizes)</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="2">Implementation</th>
+                    <th colspan="4" style="text-align: center;">Time per Search (ns) / Improvement vs Reference C</th>
+                </tr>
+                <tr>
+                    <th>10K elements</th>
+                    <th>100K elements</th>
+                    <th>1M elements</th>
+                    <th>10M elements</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Reference C</strong></td>
+                    <td>64.99 ns<br><em>(baseline)</em></td>
+                    <td>57.90 ns<br><em>(baseline)</em></td>
+                    <td>68.77 ns<br><em>(baseline)</em></td>
+                    <td>78.89 ns<br><em>(baseline)</em></td>
+                </tr>
+                <tr>
+                    <td>Branching ASM</td>
+                    <td>61.85 ns<br><span class="performance-winner">(-4.8%)</span></td>
+                    <td>56.47 ns<br><span class="performance-winner">(-2.5%)</span></td>
+                    <td>61.87 ns<br><span class="performance-winner">(-10.0%)</span></td>
+                    <td class="performance-winner">69.18 ns<br><span class="performance-winner">(-12.3%)</span></td>
+                </tr>
+                <tr>
+                    <td>Branchless ASM</td>
+                    <td class="performance-winner">44.73 ns<br><span class="performance-winner">(-31.2%)</span></td>
+                    <td>58.31 ns<br><span class="performance-loser">(+0.7%)</span></td>
+                    <td>65.79 ns<br><span class="performance-winner">(-4.3%)</span></td>
+                    <td>78.58 ns<br><span class="performance-winner">(-0.4%)</span></td>
+                </tr>
+                <tr>
+                    <td>Optimized ASM</td>
+                    <td>60.15 ns<br><span class="performance-winner">(-7.5%)</span></td>
+                    <td class="performance-winner">52.60 ns<br><span class="performance-winner">(-9.2%)</span></td>
+                    <td class="performance-winner">57.53 ns<br><span class="performance-winner">(-16.3%)</span></td>
+                    <td>75.46 ns<br><span class="performance-winner">(-4.4%)</span></td>
+                </tr>
+                <tr>
+                    <td>SIMD AVX2</td>
+                    <td class="performance-loser">69.08 ns<br><span class="performance-loser">(+6.3%)</span></td>
+                    <td>56.73 ns<br><span class="performance-winner">(-2.0%)</span></td>
+                    <td>64.76 ns<br><span class="performance-winner">(-5.8%)</span></td>
+                    <td>70.91 ns<br><span class="performance-winner">(-10.1%)</span></td>
+                </tr>
+                <tr>
+                    <td>SIMD + Optimized</td>
+                    <td class="performance-loser">70.89 ns<br><span class="performance-loser">(+9.1%)</span></td>
+                    <td>57.21 ns<br><span class="performance-winner">(-1.2%)</span></td>
+                    <td>66.03 ns<br><span class="performance-winner">(-4.0%)</span></td>
+                    <td class="performance-loser">80.58 ns<br><span class="performance-loser">(+2.1%)</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>3.2 Summary of Best Performers by Array Size</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Array Size</th>
+                    <th>Best Implementation</th>
+                    <th>Time (ns)</th>
+                    <th>Improvement vs Reference</th>
+                    <th>Key Characteristics</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>10,000</strong><br><em>(~78 KB)</em></td>
+                    <td class="performance-winner">Branchless ASM</td>
+                    <td class="performance-winner">44.73 ns</td>
+                    <td class="performance-winner">-31.2%</td>
+                    <td>Cache-resident, branch elimination helps</td>
+                </tr>
+                <tr>
+                    <td><strong>100,000</strong><br><em>(~781 KB)</em></td>
+                    <td class="performance-winner">Optimized ASM</td>
+                    <td class="performance-winner">52.60 ns</td>
+                    <td class="performance-winner">-9.2%</td>
+                    <td>Fits in L3 cache, pipelining effective</td>
+                </tr>
+                <tr>
+                    <td><strong>1,000,000</strong><br><em>(~7.6 MB)</em></td>
+                    <td class="performance-winner">Optimized ASM</td>
+                    <td class="performance-winner">57.53 ns</td>
+                    <td class="performance-winner">-16.3%</td>
+                    <td>May fit in L3, pipelining optimal</td>
+                </tr>
+                <tr>
+                    <td><strong>10,000,000</strong><br><em>(~76 MB)</em></td>
+                    <td class="performance-winner">Branching ASM</td>
+                    <td class="performance-winner">69.18 ns</td>
+                    <td class="performance-winner">-12.3%</td>
+                    <td>Memory-bound, branch prediction works</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="key-finding">
+            <h4>Key Finding #1: No Universal Winner</h4>
+            <p>
+                Different implementations excel at different scales. Branchless ASM dominates for small cache-resident 
+                arrays (31.2% faster at 10K elements), while branching ASM performs best for memory-bound searches 
+                (12.3% faster at 10M elements). Optimized ASM provides the most consistent performance across all sizes.
+            </p>
+        </div>
+
+        <!-- [Keep the rest of your existing analysis sections] -->
+
+        <h2>4. Discussion</h2>
+
+        <div class="impl-summary">
+            <h4>Implementation Characteristics Recap:</h4>
+            <div class="comparison">
+                <div class="comparison-item">
+                    <h5>Assembly Optimizations</h5>
+                    <ul>
+                        <li><strong>Branching ASM:</strong> Minimal instructions, relies on CPU branch prediction</li>
+                        <li><strong>Branchless ASM:</strong> Uses CMOV to eliminate unpredictable branches</li>
+                        <li><strong>Optimized ASM:</strong> Software pipelining to hide memory latency</li>
+                    </ul>
+                </div>
+                <div class="comparison-item">
+                    <h5>SIMD & Hybrid Approaches</h5>
+                    <ul>
+                        <li><strong>SIMD AVX2:</strong> Vectorized comparisons, 4 positions at once</li>
+                        <li><strong>SIMD+Optimized:</strong> Combines techniques, often counterproductive</li>
+                    </ul>
+                </div>
+            </div>
