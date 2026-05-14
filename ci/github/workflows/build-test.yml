@@ -15,3 +15,31 @@ jobs:
         run: cmake --build build --config Release
       - name: Test
         run: ctest --test-dir build --output-on-failure
+
+  build-arm64-cross-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure (AArch64 cross-compile check)
+        run: cmake -S . -B build-arm64 -DCMAKE_SYSTEM_PROCESSOR=aarch64
+      - name: Build (AArch64 cross-compile check)
+        run: cmake --build build-arm64 --config Release
+
+  backend-compile-checks:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        backend:
+          - cuda
+          - opencl
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure backend
+        run: |
+          if [ "${{ matrix.backend }}" = "cuda" ]; then
+            cmake -S . -B build-${{ matrix.backend }} -DSPEEDUP_ENABLE_CUDA=ON -DSPEEDUP_ENABLE_OPENCL=OFF
+          else
+            cmake -S . -B build-${{ matrix.backend }} -DSPEEDUP_ENABLE_CUDA=OFF -DSPEEDUP_ENABLE_OPENCL=ON
+          fi
+      - name: Build backend
+        run: cmake --build build-${{ matrix.backend }} --config Release

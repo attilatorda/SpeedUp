@@ -18,3 +18,7 @@ typedef struct speedup_cache_hint_t {
 void speedup_set_threads_hint(uint32_t n);
 void speedup_set_cache_hint(speedup_cache_hint_t hint);
 void speedup_set_backend_preference(speedup_backend_pref_t pref);
+
+uint32_t speedup_get_threads_hint(void);
+speedup_cache_hint_t speedup_get_cache_hint(void);
+speedup_backend_pref_t speedup_get_backend_preference(void);

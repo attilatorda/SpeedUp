@@ -5,3 +5,6 @@ static speedup_backend_pref_t g_pref = SPEEDUP_BACKEND_AUTO;
 void speedup_set_threads_hint(uint32_t n){g_threads=n;}
 void speedup_set_cache_hint(speedup_cache_hint_t hint){g_cache=hint;}
 void speedup_set_backend_preference(speedup_backend_pref_t pref){g_pref=pref;}
+uint32_t speedup_get_threads_hint(void){return g_threads;}
+speedup_cache_hint_t speedup_get_cache_hint(void){return g_cache;}
+speedup_backend_pref_t speedup_get_backend_preference(void){return g_pref;}

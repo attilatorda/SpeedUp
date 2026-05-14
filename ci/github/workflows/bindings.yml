@@ -6,4 +6,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: echo "TODO: add Tier-A binding smoke tests (C#/Python/Java/Rust/Go)"
+      - name: Configure and build core
+        run: |
+          cmake -S . -B build -DBUILD_SHARED_LIBS=ON
+          cmake --build build --config Release
+      - name: Python smoke test
+        run: |
+          export SPEEDUP_LIB="$PWD/build/libspeedup.so"
+          python bindings/python/smoke_test.py
