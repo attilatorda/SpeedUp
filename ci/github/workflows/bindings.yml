@@ -1,0 +1,9 @@
+name: bindings-smoke
+on: [push, pull_request]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "TODO: add Tier-A binding smoke tests (C#/Python/Java/Rust/Go)"
