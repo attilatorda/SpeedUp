@@ -14,6 +14,7 @@ docs/bucketization/cross-project-benchmarks.md:
     > <!-- numbers:post PROJECT --> four folders, for the quoted post text
     <!-- numbers:summary -->        one row per project (launch README)
     <!-- numbers:lf-normalize full|post -->   lf today vs. names normalized once
+    <!-- numbers:first-click PROJECT -->      today vs. Bucketization's first and later clicks
 
 PROJECT is the project name in the CSV ("Thunar", "KIO dialogs", ...).
 yazi and lf use their native re-sort times and the C++ ports' Bucketization
@@ -34,6 +35,7 @@ POST_SETS = [("usr-lib", "/usr/lib/x86_64-linux-gnu"), ("node-modules-tree", "no
              ("usr-tree", "/usr, flattened"), ("photos-100k", "100,000-photo camera roll")]
 LARGE = ["node-modules-tree", "usr-tree", "linux-tree", "photos-100k"]
 NATIVE = {"yazi": "yazi (C++ port)", "lf": "lf (C++ port)"}
+ON_HOLD = {"Godot"}  # measured, not in the launch: left out of the summary table
 
 
 def read(name):
@@ -48,6 +50,7 @@ def load():
     rows = []
     for family in ("gnome", "qt", "terminal"):
         rows += read(f"bucketization_{family}_family.csv")
+    rows += read("bucketization_godot.csv")
     native = {}
     for name in NATIVE:
         for r in read(f"bucketization_{name}_native.csv"):
@@ -120,6 +123,21 @@ def post_table(rows, native, project):
     return lines
 
 
+def first_click_table(rows, native, project):
+    """Today's re-sort vs. Bucketization's first click (pre-sort + switch) and later clicks."""
+    lines = ["| folder | entries | re-sort today (ms) | first click: pre-sort + switch (ms) | later clicks (ms) | first click slower |",
+             "|---|---:|---:|---:|---:|---:|"]
+    for d in FULL_SETS:
+        c = cases(rows, native, project, d)
+        if not c:
+            continue
+        first = [b + p for _, b, p, _ in c]
+        slower = sum(f > x[0] for f, x in zip(first, c))
+        lines.append(f"| {d} | {c[0][3]:,} | {span([x[0] for x in c])} | {span(first)} | {span([x[1] for x in c])} | "
+                     f"{slower} of {len(c)} |")
+    return lines
+
+
 def summary_table(rows, native):
     lines = ["| project | re-sort today (ms) | Bucketization (ms) | speed-up | pre-sort, once (ms) |",
              "|---|---:|---:|---:|---:|"]
@@ -132,7 +150,7 @@ def summary_table(rows, native):
     projects = []
     for r in rows:
         name = next((n for n, port in NATIVE.items() if r["project"] == port), r["project"])
-        if name not in projects:
+        if name not in projects and name not in ON_HOLD:
             projects.append(name)
     for project in projects:
         c = [x for d in LARGE for x in cases(rows, native, project, d)]
@@ -170,7 +188,7 @@ def lf_normalize_table(variant):
     return lines
 
 
-MARKER = re.compile(r"^(?P<prefix>(?:> )?)<!-- numbers:(?P<kind>full|post|summary|lf-normalize)(?: (?P<project>[^>]+?))? -->$")
+MARKER = re.compile(r"^(?P<prefix>(?:> )?)<!-- numbers:(?P<kind>full|post|summary|lf-normalize|first-click)(?: (?P<project>[^>]+?))? -->$")
 END = re.compile(r"^(?:> )?<!-- /numbers -->$")
 
 
@@ -197,6 +215,8 @@ def refresh(path, rows, native):
             table = post_table(rows, native, project)
         elif kind == "lf-normalize":
             table = lf_normalize_table(project)
+        elif kind == "first-click":
+            table = first_click_table(rows, native, project)
         else:
             table = summary_table(rows, native)
         if len(table) <= 2:

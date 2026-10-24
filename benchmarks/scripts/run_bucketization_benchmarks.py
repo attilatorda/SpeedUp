@@ -9,7 +9,8 @@ Steps:
   3. run the per-project benchmarks: speedup_benchmark_gnome_family (Thunar,
      Nemo, Caja, Nautilus), speedup_benchmark_qt_family (PCManFM-Qt, KDE file
      dialogs, Krusader), speedup_benchmark_terminal_family (nnn, yazi and lf
-     ports), and the native yazi (Rust, cargo) and lf (Go) programs
+     ports), speedup_benchmark_godot (Godot's FileSystem dock), and the native
+     yazi (Rust, cargo) and lf (Go) programs
   4. write CSV files and a Markdown summary to benchmarks/outputs/
 
 Usage:
@@ -42,7 +43,9 @@ FAMILY_CSV = {
     "gnome": os.path.join(OUTPUTS, "bucketization_gnome_family.csv"),
     "qt": os.path.join(OUTPUTS, "bucketization_qt_family.csv"),
     "terminal": os.path.join(OUTPUTS, "bucketization_terminal_family.csv"),
+    "godot": os.path.join(OUTPUTS, "bucketization_godot.csv"),
 }
+ON_HOLD = {"Godot"}  # measured, but not part of the launch (docs/bucketization/launch/README.md)
 NATIVE_CSV = {
     "yazi": os.path.join(OUTPUTS, "bucketization_yazi_native.csv"),
     "lf": os.path.join(OUTPUTS, "bucketization_lf_native.csv"),
@@ -114,6 +117,7 @@ def run_projects(build, repeats, datasets, max_entries):
     run(os.path.join(build, "speedup_benchmark_gnome_family"), FAMILY_CSV["gnome"], repeats, small, limit)
     run(os.path.join(build, "speedup_benchmark_qt_family"), FAMILY_CSV["qt"], repeats, small, limit)
     run(os.path.join(build, "speedup_benchmark_terminal_family"), FAMILY_CSV["terminal"], repeats, small, limit)
+    run(os.path.join(build, "speedup_benchmark_godot"), FAMILY_CSV["godot"], repeats, small, limit)
     for name, binary in build_native(build).items():
         if name == "lf":  # Go's flag package
             cmd = [binary, "-repeats", str(repeats), "-csv", NATIVE_CSV[name], *small]
@@ -293,7 +297,11 @@ def summary_rows():
         presort = [float(r["bz_presort_ms"]) for r in large]
         valid = sum(r["bz_valid"] == "1" for r in rows if r["project"] == project)
         total = sum(1 for r in rows if r["project"] == project)
-        out.append((label, resort, switch, ratio, presort, valid, total))
+        first = [float(r["bz_presort_ms"]) + float(r["bz_switch_ms"]) for r in large]
+        slower = sum(f > t for f, t in zip(first, resort))
+        if project in ON_HOLD:
+            label += " (on hold)"
+        out.append((label, resort, switch, ratio, presort, valid, total, slower, len(first)))
     return out
 
 
@@ -305,11 +313,13 @@ def summary_table():
            "name, size and modified, ascending and descending. Re-sort = the project's own code path",
            "for a column click; switch = Bucketization's `sort_by` + first page (64 rows), grouping not",
            "cached. Pre-sort is paid once per column (both directions).", "",
-           "| project | re-sort (ms) | Bucketization switch (ms) | speed-up | pre-sort, once (ms) | valid orders |",
-           "|---|---:|---:|---:|---:|---:|"]
-    for label, resort, switch, ratio, presort, valid, total in summary_rows():
+           "| project | re-sort (ms) | Bucketization switch (ms) | speed-up | pre-sort, once (ms) | first click slower | valid orders |",
+           "|---|---:|---:|---:|---:|---:|---:|"]
+    for label, resort, switch, ratio, presort, valid, total, slower, cases in summary_rows():
         out.append(f"| {label} | {ranges(resort, f)} | {ranges(switch, f)} | "
-                   f"{ranges(ratio, lambda v: f'{max(v, 1):,.0f}')}× | {ranges(presort, f)} | {valid}/{total} |")
+                   f"{ranges(ratio, lambda v: f'{max(v, 1):,.0f}')}× | {ranges(presort, f)} | {slower}/{cases} | {valid}/{total} |")
+    out += ["", "First click slower: cases where pre-sort + switch (the first click on a column) took longer",
+            "than the project's own re-sort. Later clicks on that column are never slower."]
     return out
 
 
@@ -330,6 +340,11 @@ def project_tables():
         "terminal": ("Terminal managers: nnn, and C++ ports of yazi and lf",
                      ["nnn: glibc `qsort()` of its entry array with `entrycmp()`. For yazi and lf the re-sort here is",
                       "the C++ port; their native times are in the next tables."]),
+        "godot": ("Godot editor: FileSystem dock (on hold)",
+                  ["`sort_file_info_list()` on the folder's files, which the dock rebuilds in the editor's cached",
+                   "name order on every change (folders are listed separately). Name and type use comparator mode.",
+                   "On hold: Godot's contribution policy forbids AI-written code and text, and the first click on a",
+                   "column is often slower than Godot's own sort; see docs/bucketization/cross-project-benchmarks.md."]),
     }
     for key, path in FAMILY_CSV.items():
         if os.path.exists(path):

@@ -5,7 +5,7 @@
 | Where | <https://discuss.kde.org>, category *Development* (or the Dolphin Matrix room #dolphin:kde.org for a lighter first contact) |
 | Account | KDE Identity |
 | License | Dolphin and Krusader GPL-2.0-or-later; KIO's `kdirsortfilterproxymodel.cpp` LGPL-2.0-only. Bucketization under MIT fits all three |
-| AI policy (2026-10-24) | no adopted KDE-wide policy; a draft is under discussion, and some KDE projects refuse AI-generated code. **Write this post yourself; the draft is the facts** |
+| AI policy (2026-10-24) | no adopted KDE-wide policy; the draft allows AI-assisted code under human review and asks for self-written commit messages and MR descriptions. **Write this post yourself; the draft is the facts** |
 | When | after the Dolphin and Krusader bug reports, so you can link them |
 
 ## Numbers

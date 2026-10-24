@@ -57,7 +57,7 @@ def main():
     pattern = re.compile(r"<([A-Z][A-Z_]+)>")
     missing = set()
 
-    marker = re.compile(r"^(?:> )?<!-- (?:numbers:[a-z]+(?: [^>]*)?|/numbers|summary-table[^>]*) -->\n", re.M)
+    marker = re.compile(r"^(?:> )?<!-- (?:numbers:[a-z-]+(?: [^>]*)?|/numbers|summary-table[^>]*) -->\n", re.M)
 
     def fill(text):
         text = marker.sub("", text)

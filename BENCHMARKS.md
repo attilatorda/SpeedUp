@@ -76,11 +76,12 @@ Results: `benchmarks/outputs/bucketization_dolphin_stack.csv`,
 analysis: `docs/bucketization/benchmarks.md`.
 
 The same runner also runs the per-project benchmarks (Thunar, Nemo, Caja,
-Nautilus on GTK 4, PCManFM-Qt, the KDE file dialogs, Krusader, nnn, and yazi
-and lf natively in Rust and Go; `--only-projects` runs just these). They need
+Nautilus on GTK 4, PCManFM-Qt, the KDE file dialogs, Krusader, nnn, yazi and
+lf natively in Rust and Go, and the Godot editor's FileSystem dock;
+`--only-projects` runs just these). They need
 `libgtk-4-dev` for Nautilus, plus `cargo` and `go` for the native programs,
-and write `benchmarks/outputs/bucketization_{gnome,qt,terminal}_family.csv`
-and `bucketization_{yazi,lf}_native.csv`. Analysis:
+and write `benchmarks/outputs/bucketization_{gnome,qt,terminal}_family.csv`,
+`bucketization_godot.csv` and `bucketization_{yazi,lf}_native.csv`. Analysis:
 `docs/bucketization/cross-project-benchmarks.md`.
 
 ## Add a new benchmark checklist

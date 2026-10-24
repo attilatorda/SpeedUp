@@ -5,7 +5,7 @@
 | Where | <https://gitlab.xfce.org/xfce/thunar/-/issues> (search first for "sort" and "large folder") |
 | Account | gitlab.xfce.org. Create it a few days early: new accounts can need approval |
 | License | GPL-2.0-or-later. Bucketization under MIT (or LGPL-2.1-or-later) fits |
-| AI policy (2026-10-24) | none found in the repository (`HACKING`) or on the web. Disclose anyway |
+| AI policy (2026-10-24) | Xfce's AI/LLM policy (developer docs, August 2026): AI-assisted material is accepted **if it is disclosed in every merge request and issue**; contributors stay responsible for accuracy, legality and quality; you accept the policy when you join Xfce's GitLab. The post below discloses; do the same in every merge request |
 | Fit | **high**. Thunar owns its sort (`_thunar_tree_view_model_sort()`) and already caches collation keys, so the name key is free |
 | First post | issue: proposal with numbers and the one integration question |
 | Code needed | a C port (or C API) of BucketIndex; then a patch to `thunar-tree-view-model.c` |

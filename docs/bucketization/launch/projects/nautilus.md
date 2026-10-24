@@ -5,7 +5,7 @@
 | Where | <https://gitlab.gnome.org/GNOME/nautilus/-/issues> (search first for "sort performance") |
 | Account | gitlab.gnome.org |
 | License | GPL-3.0-or-later (sort files GPL-2.0-or-later). Bucketization under MIT fits |
-| AI policy (2026-10-24) | no Nautilus statement found. Several GNOME projects (Loupe, Calendar, Extensions, Circle) refuse generated code. **Expect strictness: write anything you post yourself, and offer hand-written patches** |
+| AI policy (2026-10-24) | no Nautilus policy (repository checked at `9f3a110`), and no GNOME-wide one. Several other GNOME projects (Loupe, Calendar) ban LLM-generated contributions, and GNOME Shell extensions forbid AI-generated ones. **Re-check on launch day: if Nautilus adopts a ban, it leaves the launch.** Write anything you post yourself |
 | Fit | medium-high. Large gains, but GTK owns the sort (`GtkSortListModel`), so it needs a custom list model in Nautilus or a change in GTK |
 | First post | issue: measurements and a design question (not a patch) |
 

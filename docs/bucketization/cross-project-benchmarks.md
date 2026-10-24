@@ -3,17 +3,19 @@
 Can Bucketization speed up file managers other than KDE Dolphin? This page
 measures it in each project's own sort code, on the same real directory
 listings as the Dolphin benchmarks ([benchmarks.md](benchmarks.md)), and gives
-a verdict per project. The launch plan built on it is in
-[launch/README.md](launch/README.md).
+a verdict per project. It also covers the Godot editor's FileSystem dock,
+which is on hold (see [Godot](#godot-on-hold)). The launch plan built on it
+is in [launch/README.md](launch/README.md).
 
 ## Conclusion
 
 **Yes, in every file manager measured.** On folders of 36,000–100,000
 entries, a column click costs 6 ms to 3 s today. Bucketization gets the
 visible rows final in 0.05–2 ms, plus a pre-sort of 1.3–206 ms paid once
-per column. All 420 Bucketization orders measured here (10 projects ×
-7 datasets × 3 columns × 2 directions) are sorted under the project's own
-comparison; Dolphin's are in benchmarks.md.
+per column. All 456 Bucketization orders measured here (10 file managers ×
+7 datasets × 3 columns × 2 directions, plus Godot's 36) are sorted under the
+project's own comparison; Dolphin's are in benchmarks.md. No file manager
+gets slower on a big folder, not even on the first click.
 
 <!-- numbers:summary -->
 | project | re-sort today (ms) | Bucketization (ms) | speed-up | pre-sort, once (ms) |
@@ -89,6 +91,7 @@ of every project fits.
 | **lf** | very large (name) | low for the first step (normalize once: 4–8×, no Bucketization needed); Go port for Bucketization | yes | issue + small PR (normalize once) | **contribute** |
 | **yazi** | moderate in absolute terms (12–63 ms → 0.1–0.3 ms at 100k entries) | medium: Rust port; design approval required first | yes | feature request, human-written (policy) | contribute, carefully |
 | **nnn** | moderate | low code, but the project avoids features | yes | optional discussion | low priority |
+| **Godot** (editor FileSystem dock) | large for type sorts in big folders; none for name and date (already fast) | first click slower in 6 of 24 big-folder cases; policy forbids AI-written code and text | yes (MIT) | none on launch day | **on hold** (benchmarks kept) |
 
 The ranking for a same-day launch is in [launch/README.md](launch/README.md).
 The bug reports and lf's normalization fix go first: they help the projects
@@ -114,6 +117,7 @@ as before the click:
 | yazi | `40a9142` | `FilesSorter::sort()`: `sort_unstable_by` | Rust 1.97 (native) |
 | lf | `664d7c8` | `dir.sort()`: `slices.SortStableFunc` by the column, then by folders first | Go 1.24 (native) |
 | Dolphin (KDE) | `c5849f9` | `KFileItemModel::resortAllItems()` | Qt 6.4.2, see [benchmarks.md](benchmarks.md) |
+| Godot editor | `c8256a8` | `FileSystemDock::_update_file_list()` → `sort_file_info_list()`: a linked-list merge sort (with a sorted-prefix check) of the folder's files, rebuilt in the editor's cached name order on every change | C++, extracted (`benchmarks/godot_stack`) |
 
 - **Settings:** each project's defaults:
   - folders first;
@@ -217,6 +221,93 @@ and 0.16–1.1× as long as lf's native Go sort. So a Rust port of
 Bucketization should be at least as fast as the C++ figures here, and a Go
 port somewhat slower.
 
+## Drop rules applied
+
+The launch plan drops a project when Bucketization would slow it down or when
+its contribution policy forbids AI-assisted work
+([launch/README.md](launch/README.md#drop-rules)).
+
+**Speed.** Later clicks on a column were faster than the project's own sort
+in every measured case. The first click pays the pre-sort, so it is the one
+to check:
+
+| Project | First click slower on big folders (36k–100k entries) | First click slower on small folders (395–1,533 entries) |
+|---|---:|---:|
+| Thunar, Nemo, Caja, Nautilus, Krusader | 0 of 24 each | 0 of 18 each |
+| PCManFM-Qt | 0 of 24 | 8 of 18 (by up to 0.2 ms) |
+| KDE file dialogs | 0 of 24 | 6 of 18 (by up to 0.34 ms) |
+| nnn | 0 of 24 | 17 of 18 (by up to 0.8 ms) |
+| yazi (vs. native Rust) | 0 of 24 | 11 of 18 (by up to 0.06 ms) |
+| lf (vs. native Go) | 0 of 24 | 2 of 18 (by up to 0.01 ms) |
+| Dolphin | 0 of 24 | 4 of 18 (by up to 0.12 ms) |
+| **Godot** | **6 of 24 (by up to 1.1 s)** | **12 of 12 (by up to 26 ms)** |
+
+Every integration plan keeps the project's current sort below about 2,000
+entries. That removes the small-folder cases, which were under a millisecond
+anyway. Only Godot is slower on big folders.
+
+**Policy** (checked 2026-10-24):
+- **Only Godot forbids AI-written code**, and AI-written text in issues and
+  PRs.
+- yazi allows AI-assisted work with disclosure, human-written text and design
+  approval first.
+- Xfce allows it if it is disclosed in every merge request and issue.
+- KDE's draft allows it under human review.
+- Nautilus, Nemo, Caja, PCManFM-Qt, lf and nnn have published no policy.
+
+Godot therefore fails both rules and is **on hold**. Its benchmark stays,
+and the launch kit says what would have to change.
+
+## Godot (on hold)
+
+The editor's FileSystem dock rebuilds its file list on every sort change. It
+starts from `EditorFileSystem`'s files, which are already sorted by name with
+`FileNoCaseComparator`, and calls `sort_file_info_list()`:
+- `SortList` checks for a sorted prefix first, so a name sort costs one pass
+  over the files.
+- The type sort compares `extension + type + basename` strings that are
+  built anew for every comparison. That makes it the one slow sort: up to
+  about 1 s at 100,000 files.
+
+Folders are listed separately, so only files are sorted. Bucketization uses
+comparator mode for name and type, since Godot's natural, case-folded
+comparison has no 64-bit key here.
+
+<!-- numbers:full Godot -->
+| folder | entries | re-sort today (ms) | Bucketization switch (ms) | speed-up | pre-sort, once per column (ms) |
+|---|---:|---:|---:|---:|---:|
+| usr-lib | 1,487 | 0.10–9.2 | 0.034–0.92 | 2–40× | 1.9–34 |
+| usr-bin | 1,171 | 0.056–6.2 | 0.022–0.34 | 2–20× | 0.73–18 |
+| node-modules-tree | 32,181 | 11–382 | 0.089–1.2 | 97–419× | 5.7–217 |
+| usr-tree | 88,676 | 42–1,052 | 0.19–3.0 | 144–598× | 11–478 |
+| linux-tree | 97,005 | 4.3–1,165 | 0.15–2.0 | 13–871× | 22–589 |
+| photos-100k | 100,000 | 22–177 | 0.094–0.38 | 148–486× | 1.2–1,261 |
+<!-- /numbers -->
+
+Counting the pre-sort, as the first click on a column pays it:
+
+<!-- numbers:first-click Godot -->
+| folder | entries | re-sort today (ms) | first click: pre-sort + switch (ms) | later clicks (ms) | first click slower |
+|---|---:|---:|---:|---:|---:|
+| usr-lib | 1,487 | 0.10–9.2 | 2.0–34 | 0.034–0.92 | 6 of 6 |
+| usr-bin | 1,171 | 0.056–6.2 | 0.76–18 | 0.022–0.34 | 6 of 6 |
+| node-modules-tree | 32,181 | 11–382 | 5.8–218 | 0.089–1.2 | 0 of 6 |
+| usr-tree | 88,676 | 42–1,052 | 12–480 | 0.19–3.0 | 0 of 6 |
+| linux-tree | 97,005 | 4.3–1,165 | 22–590 | 0.15–2.0 | 2 of 6 |
+| photos-100k | 100,000 | 22–177 | 1.3–1,261 | 0.094–0.38 | 4 of 6 |
+<!-- /numbers -->
+
+Where Godot's list is already in the requested order, its sort is one pass,
+and Bucketization's pre-sort costs more:
+- name order;
+- type order in a folder of one file type (the camera roll);
+- date order when all times are equal (the kernel tree).
+
+Fixing that would take keys for Godot's comparisons and a pre-sort that
+notices sorted input; both are untested. Godot's contribution policy forbids
+AI-written code and text, so any Godot work would have to be written by hand
+from the specification.
+
 ## Findings in the projects' code
 
 Found while extracting and checking the sort paths. Each is useful to report
@@ -260,8 +351,9 @@ sudo apt install qt6-base-dev libicu-dev libglib2.0-dev libgtk-4-dev   # stacks
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
 python3 benchmarks/scripts/run_bucketization_benchmarks.py --build build --quick --only-projects
 ./build/speedup_krusader_descending_check     # Krusader's comparator (aborts in debug mode)
+./build/speedup_benchmark_godot build/bucketization-datasets/*.tsv   # Godot alone (the runner includes it)
 ```
 
 The runner writes `benchmarks/outputs/bucketization_{gnome,qt,terminal}_family.csv`,
-`bucketization_{yazi,lf}_native.csv` and the tables in
+`bucketization_godot.csv`, `bucketization_{yazi,lf}_native.csv` and the tables in
 [`bucketization_file_manager_stacks.md`](../../benchmarks/outputs/bucketization_file_manager_stacks.md).

@@ -27,9 +27,9 @@ This release contains:
 - the interface and reference implementations in C++ (header-only, C++17)
   and Java 17, verified against the same cross-language specification:
   [design and specification](<DESIGN_DOC_URL>)
-- benchmarks against the sorting code of 11 Linux file managers, run on real
-  directory listings: [results](<CROSS_PROJECT_URL>), [method and Dolphin
-  details](<BENCHMARKS_URL>)
+- benchmarks against the sorting code of 11 Linux file managers and the Godot
+  editor's FileSystem dock, run on real directory listings:
+  [results](<CROSS_PROJECT_URL>), [method and Dolphin details](<BENCHMARKS_URL>)
 
 Highlights, on folders of 36,000–100,000 entries (real listings and a
 100,000-photo camera roll), until the visible rows are in their final order

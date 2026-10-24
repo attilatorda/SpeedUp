@@ -208,18 +208,22 @@ name, size and modified, ascending and descending. Re-sort = the project's own c
 for a column click; switch = Bucketization's `sort_by` + first page (64 rows), grouping not
 cached. Pre-sort is paid once per column (both directions).
 
-| project | re-sort (ms) | Bucketization switch (ms) | speed-up | pre-sort, once (ms) | valid orders |
-|---|---:|---:|---:|---:|---:|
-| Thunar | 38–333 | 0.047–0.30 | 218–1,552× | 2.8–10 | 42/42 |
-| Nemo | 36–382 | 0.057–0.22 | 380–2,206× | 2.6–11 | 42/42 |
-| Caja | 45–389 | 0.048–0.24 | 312–1,953× | 2.5–10 | 42/42 |
-| Nautilus | 63–480 | 0.052–0.26 | 729–2,921× | 2.6–12 | 42/42 |
-| PCManFM-Qt | 48–1,499 | 0.092–2.0 | 322–7,640× | 2.6–206 | 42/42 |
-| KIO dialogs | 84–1,384 | 0.079–1.2 | 356–6,647× | 2.0–159 | 42/42 |
-| Krusader | 115–801 | 0.056–0.54 | 587–4,207× | 1.9–68 | 42/42 |
-| nnn | 7.7–290 | 0.072–0.28 | 72–1,379× | 1.9–106 | 42/42 |
-| yazi (native Rust) | 6.3–63 | 0.060–0.33 | 37–425× | 1.5–12 | 42/42 |
-| lf (native Go) | 8.0–3,050 | 0.057–1.0 | 8–12,108× | 1.3–184 | 42/42 |
+| project | re-sort (ms) | Bucketization switch (ms) | speed-up | pre-sort, once (ms) | first click slower | valid orders |
+|---|---:|---:|---:|---:|---:|---:|
+| Thunar | 38–333 | 0.047–0.30 | 218–1,552× | 2.8–10 | 0/24 | 42/42 |
+| Nemo | 36–382 | 0.057–0.22 | 380–2,206× | 2.6–11 | 0/24 | 42/42 |
+| Caja | 45–389 | 0.048–0.24 | 312–1,953× | 2.5–10 | 0/24 | 42/42 |
+| Nautilus | 63–480 | 0.052–0.26 | 729–2,921× | 2.6–12 | 0/24 | 42/42 |
+| PCManFM-Qt | 48–1,499 | 0.092–2.0 | 322–7,640× | 2.6–206 | 0/24 | 42/42 |
+| KIO dialogs | 84–1,384 | 0.079–1.2 | 356–6,647× | 2.0–159 | 0/24 | 42/42 |
+| Krusader | 115–801 | 0.056–0.54 | 587–4,207× | 1.9–68 | 0/24 | 42/42 |
+| nnn | 7.7–290 | 0.072–0.28 | 72–1,379× | 1.9–106 | 0/24 | 42/42 |
+| yazi (native Rust) | 6.3–63 | 0.060–0.33 | 37–425× | 1.5–12 | 0/24 | 42/42 |
+| lf (native Go) | 8.0–3,050 | 0.057–1.0 | 8–12,108× | 1.3–184 | 0/24 | 42/42 |
+| Godot (on hold) | 4.3–1,165 | 0.089–3.0 | 13–871× | 1.2–1,261 | 6/24 | 36/36 |
+
+First click slower: cases where pre-sort + switch (the first click on a column) took longer
+than the project's own re-sort. Later clicks on that column are never slower.
 
 ### GNOME family: Thunar, Nemo, Caja, Nautilus
 
@@ -667,6 +671,52 @@ the C++ port; their native times are in the next tables.
 | yazi (C++ port) | photos-100k | 100,000 | size | desc | 20 | 1.56 | 0.15 | 0.0005 | 4.55 | 129× | yes |
 | yazi (C++ port) | photos-100k | 100,000 | modified | asc | 22 | 2.82 | 0.10 | 0.0002 | 2.94 | 214× | yes |
 | yazi (C++ port) | photos-100k | 100,000 | modified | desc | 26 | 4.55 | 0.09 | 0.0005 | 2.62 | 291× | yes |
+
+### Godot editor: FileSystem dock (on hold)
+
+`sort_file_info_list()` on the folder's files, which the dock rebuilds in the editor's cached
+name order on every change (folders are listed separately). Name and type use comparator mode.
+On hold: Godot's contribution policy forbids AI-written code and text, and the first click on a
+column is often slower than Godot's own sort; see docs/bucketization/cross-project-benchmarks.md.
+
+| project | dataset | entries | column | order | project's re-sort | partial_sort | Bucketization switch | cached | pre-sort (once) | speed-up | valid order |
+|---|---|---:|---|---|---:|---:|---:|---:|---:|---:|:---:|
+| Godot | usr-bin | 1,171 | name | asc | 0.39 | 0.10 | 0.02 | 0.0002 | 1.54 | 18× | yes |
+| Godot | usr-bin | 1,171 | name | desc | 0.38 | 1.51 | 0.02 | 0.0001 | 1.31 | 17× | yes |
+| Godot | usr-bin | 1,171 | type | asc | 5.90 | 2.66 | 0.34 | 0.0002 | 18 | 17× | yes |
+| Godot | usr-bin | 1,171 | type | desc | 6.25 | 14 | 0.31 | 0.0001 | 16 | 20× | yes |
+| Godot | usr-bin | 1,171 | modified | asc | 0.06 | 0.12 | 0.02 | 0.0001 | 0.73 | 2× | yes |
+| Godot | usr-bin | 1,171 | modified | desc | 0.06 | 0.11 | 0.02 | 0.0001 | 0.76 | 3× | yes |
+| Godot | usr-lib | 1,487 | name | asc | 0.75 | 0.38 | 0.08 | 0.0002 | 3.31 | 10× | yes |
+| Godot | usr-lib | 1,487 | name | desc | 1.37 | 5.00 | 0.03 | 0.0001 | 5.55 | 40× | yes |
+| Godot | usr-lib | 1,487 | type | asc | 9.17 | 3.35 | 0.92 | 0.0002 | 24 | 10× | yes |
+| Godot | usr-lib | 1,487 | type | desc | 8.79 | 5.29 | 0.64 | 0.0002 | 34 | 14× | yes |
+| Godot | usr-lib | 1,487 | modified | asc | 0.13 | 0.54 | 0.05 | 0.0001 | 1.90 | 2× | yes |
+| Godot | usr-lib | 1,487 | modified | desc | 0.10 | 0.79 | 0.06 | 0.0001 | 1.90 | 2× | yes |
+| Godot | node-modules-tree | 32,181 | name | asc | 18 | 0.74 | 0.14 | 0.0001 | 9.99 | 134× | yes |
+| Godot | node-modules-tree | 32,181 | name | desc | 25 | 83 | 0.09 | 0.0002 | 14 | 282× | yes |
+| Godot | node-modules-tree | 32,181 | type | asc | 357 | 31 | 1.20 | 0.0001 | 215 | 297× | yes |
+| Godot | node-modules-tree | 32,181 | type | desc | 382 | 42 | 0.91 | 0.0001 | 217 | 419× | yes |
+| Godot | node-modules-tree | 32,181 | modified | asc | 14 | 0.87 | 0.14 | 0.0002 | 5.67 | 97× | yes |
+| Godot | node-modules-tree | 32,181 | modified | desc | 11 | 1.49 | 0.11 | 0.0001 | 5.74 | 108× | yes |
+| Godot | usr-tree | 88,676 | name | asc | 50 | 2.25 | 0.25 | 0.0001 | 24 | 201× | yes |
+| Godot | usr-tree | 88,676 | name | desc | 59 | 234 | 0.23 | 0.0001 | 40 | 260× | yes |
+| Godot | usr-tree | 88,676 | type | asc | 1052 | 124 | 1.76 | 0.0001 | 478 | 598× | yes |
+| Godot | usr-tree | 88,676 | type | desc | 1027 | 104 | 3.04 | 0.0001 | 358 | 338× | yes |
+| Godot | usr-tree | 88,676 | modified | asc | 42 | 2.29 | 0.29 | 0.0002 | 14 | 144× | yes |
+| Godot | usr-tree | 88,676 | modified | desc | 47 | 7.38 | 0.19 | 0.0002 | 11 | 244× | yes |
+| Godot | linux-tree | 97,005 | name | asc | 47 | 3.08 | 0.32 | 0.0001 | 27 | 147× | yes |
+| Godot | linux-tree | 97,005 | name | desc | 43 | 193 | 0.15 | 0.0001 | 25 | 280× | yes |
+| Godot | linux-tree | 97,005 | type | asc | 1165 | 109 | 1.34 | 0.0002 | 589 | 871× | yes |
+| Godot | linux-tree | 97,005 | type | desc | 1108 | 173 | 2.02 | 0.0001 | 509 | 549× | yes |
+| Godot | linux-tree | 97,005 | modified | asc | 4.28 | 1.83 | 0.33 | 0.0001 | 22 | 13× | yes |
+| Godot | linux-tree | 97,005 | modified | desc | 8.65 | 196 | 0.16 | 0.0001 | 42 | 54× | yes |
+| Godot | photos-100k | 100,000 | name | asc | 22 | 8.11 | 0.15 | 0.0001 | 69 | 148× | yes |
+| Godot | photos-100k | 100,000 | name | desc | 29 | 162 | 0.15 | 0.0001 | 92 | 199× | yes |
+| Godot | photos-100k | 100,000 | type | asc | 177 | 298 | 0.38 | 0.0002 | 1146 | 460× | yes |
+| Godot | photos-100k | 100,000 | type | desc | 170 | 2109 | 0.35 | 0.0003 | 1261 | 486× | yes |
+| Godot | photos-100k | 100,000 | modified | asc | 32 | 2.00 | 0.12 | 0.0001 | 1.49 | 277× | yes |
+| Godot | photos-100k | 100,000 | modified | desc | 32 | 1.01 | 0.09 | 0.0001 | 1.21 | 345× | yes |
 
 ### yazi: native Rust re-sort vs. Bucketization
 

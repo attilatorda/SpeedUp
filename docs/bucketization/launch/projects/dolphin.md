@@ -5,7 +5,7 @@
 | Where | bug: <https://bugs.kde.org> (product *dolphin*, component *view-engine: general*); code: <https://invent.kde.org/system/dolphin>; discussion: the KDE Discuss post in [kde-discuss.md](kde-discuss.md) |
 | Account | KDE Identity (invent.kde.org) and a bugs.kde.org account (separate signup) |
 | License | GPL-2.0-or-later. Bucketization under MIT fits |
-| AI policy (2026-10-24) | KDE has no adopted policy: a draft ("Don't be lazy") is under discussion, and some KDE projects refuse AI-generated code. **Disclose; write the bug report yourself; offer hand-written patches** |
+| AI policy (2026-10-24) | KDE has no adopted policy. The draft under discussion (September 2026) allows AI-assisted code under human review, lets maintainers close "obvious and lazy" LLM contributions, and asks you to write commit messages and merge request descriptions yourself. **Disclose; write the bug report and MR text yourself** |
 | Fit | **highest**: the largest measured gains, and the stack the design was made for |
 | First post | the bug report below (useful on its own), then the KDE Discuss post |
 | Step-by-step | [../../kde-contribution-plan.md](../../kde-contribution-plan.md) |

@@ -10,9 +10,10 @@ prepared so that launch day is mostly copy, check and post.
 |---|---|
 | this README | strategy, the timeline, the checklist |
 | [announcement.md](announcement.md) | GitHub release notes and a short announcement |
-| [projects/](projects/) | one kit per project: where to post, account, license, AI policy, the post itself, follow-ups |
+| [projects/](projects/) | one kit per project: where to post, account, license, AI policy, the post itself, follow-ups (Godot's kit is on hold) |
 | [CITATION.cff.template](CITATION.cff.template) | citation metadata for the repository root |
 | [fill_placeholders.py](fill_placeholders.py) | fills `<RELEASE_URL>`, `<YOUR_NAME>` and the other placeholders into ready-to-paste copies |
+| [update_numbers.py](update_numbers.py) | refreshes every number table in the kits after a benchmark re-run |
 
 Numbers come from [../cross-project-benchmarks.md](../cross-project-benchmarks.md)
 (per project) and [../benchmarks.md](../benchmarks.md) (Dolphin in depth).
@@ -77,6 +78,41 @@ Nothing changes visibly in folders under about 2,000 entries: both ways take
 a few milliseconds or less, and a 60 Hz frame is 16.7 ms. Every post says
 this.
 
+## Drop rules
+
+A project leaves the launch if either rule fails. Check both again on launch
+day.
+
+1. **Speed.** Bucketization must not make the project slower.
+   - Later clicks on a column were faster in every case.
+   - The first click on a column pays the pre-sort. That first click must not
+     be slower than the project's own sort on folders where the
+     Bucketization path is used.
+   - Every integration keeps the project's current sort for folders under
+     about 2,000 entries. Below that size, a few projects' first click was up
+     to 0.8 ms slower (PCManFM-Qt, KIO, nnn, yazi, lf, Dolphin).
+2. **AI policy.** The project's contribution policy must not forbid
+   AI-assisted contributions. Policies that allow them with conditions
+   (disclosure, human-written text, approval first) are fine, and the kits
+   follow those conditions.
+
+Checked on 2026-10-24 ([../cross-project-benchmarks.md](../cross-project-benchmarks.md#drop-rules-applied)):
+
+| Project | Speed: first click slower on big folders | AI policy | In the launch |
+|---|---:|---|:---:|
+| Dolphin, Krusader, KDE file dialogs | 0 of 24 each | KDE: no adopted policy; the draft allows AI with human review and asks for self-written MR text | yes |
+| Thunar | 0 of 24 | Xfce (Aug 2026): allowed, disclosed in every merge request and issue | yes |
+| Nemo, Caja | 0 of 24 each | none published | yes |
+| Nautilus | 0 of 24 | no Nautilus policy (several other GNOME apps ban LLM contributions; re-check) | yes |
+| PCManFM-Qt | 0 of 24 | none published | yes |
+| yazi | 0 of 24 | allowed with disclosure; human-written text; design approval before a PR | yes |
+| lf, nnn | 0 of 24 each | none published | yes (nnn optional) |
+| **Godot** | **6 of 24** (up to 1.1 s slower) | **forbids AI-written code and AI-written text** | **on hold** |
+
+**Godot is on hold, not dropped.** Its benchmark and results stay in the
+repository, and its kit ([projects/godot.md](projects/godot.md)) lists what
+would have to change before contributing. It gets no launch-day post.
+
 ## Order of posting on launch day
 
 In each kit, the first post is the one that is useful to the project even if
@@ -102,6 +138,8 @@ Bucketization is never merged. Order:
    before any PR).
 9. **nnn**: optional, low priority (small gains on typical folders).
 
+Godot is not in this list: it is on hold (see [Drop rules](#drop-rules)).
+
 Space the posts out over the day. Make each one project-specific, not one
 text pasted eleven times. Projects notice cross-posting, and some treat it as
 spam.
@@ -125,11 +163,13 @@ spam.
   - gitlab.xfce.org;
   - GitHub.
 - [ ] **AI policies**, re-checked on the day; the kits record what was true on
-      2026-10-24. The implementation was written with an AI assistant:
+      2026-10-24. A project whose policy now forbids AI-assisted work leaves
+      the launch ([Drop rules](#drop-rules)). The implementation was written
+      with an AI assistant, so for every project that stays:
   - say so in every post;
   - write post text yourself, or at least edit it into your own words;
-  - where a project bans generated code, offer to write the patch by hand
-    from the specification.
+  - follow the policy's conditions (disclosure format, human-written text,
+    approval before a PR).
 - [ ] **Duplicates:** search each tracker for an existing report of the same
       issue (the links are in the kits).
 - [ ] **Fresh numbers:** re-run against current upstream sources if they have
