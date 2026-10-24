@@ -7,7 +7,7 @@
 | License | MIT. Bucketization under MIT fits; a Go port would be MIT, under your copyright |
 | AI policy (2026-10-24) | none found in the repository (`CONTRIBUTING.md`). Disclose anyway |
 | Fit | **high for a first contribution**: lf's default name sort spends most of its time normalizing names on every comparison. A small, self-contained change makes it 4–8× faster with identical order. Bucketization is the step after that |
-| First post | issue: the normalization finding with numbers, offering a PR; Bucketization as the next step |
+| First post | issue about the normalization finding, filed before launch without mentioning Bucketization ([../tickets/lf-normalize-per-comparison.md](../tickets/lf-normalize-per-comparison.md)); a separate Bucketization issue later, if wanted |
 | Code needed | first a few lines in `nav.go`; for Bucketization, a Go port |
 
 ## Numbers
@@ -43,6 +43,10 @@ comparison, same order (from `bucketization_lf_native.csv`):
 <!-- /numbers -->
 
 ## Day-0 post
+
+Superseded: the ticket in [../tickets/](../tickets/) is the version to file
+now, without the Bucketization paragraph. Keep the paragraph below for a
+later follow-up issue.
 
 **Title:** Natural sort normalizes both names on every comparison (1.9–3.0 s for 100k files; 4–8× faster if done once per sort)
 

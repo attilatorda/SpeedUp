@@ -11,6 +11,7 @@ prepared so that launch day is mostly copy, check and post.
 | this README | strategy, the timeline, the checklist |
 | [announcement.md](announcement.md) | GitHub release notes and a short announcement |
 | [projects/](projects/) | one kit per project: where to post, account, license, AI policy, the post itself, follow-ups (Godot's kit is on hold) |
+| [tickets/](tickets/) | bug tickets to file before the launch (Dolphin, Krusader, lf), without mentioning Bucketization |
 | [CITATION.cff.template](CITATION.cff.template) | citation metadata for the repository root |
 | [fill_placeholders.py](fill_placeholders.py) | fills `<RELEASE_URL>`, `<YOUR_NAME>` and the other placeholders into ready-to-paste copies |
 | [update_numbers.py](update_numbers.py) | refreshes every number table in the kits after a benchmark re-run |
@@ -40,10 +41,18 @@ Numbers come from [../cross-project-benchmarks.md](../cross-project-benchmarks.m
 - **It is credit, not control.** Publishing gives you authorship credit and
   makes the design prior art. Anyone may implement the idea. Copyright covers
   your code, not the algorithm.
-- **Patents:** if you might ever want one, talk to a patent attorney *before*
-  the release. In Europe, any public disclosure before filing destroys
-  novelty; the US has a one-year grace period. For an open-source path this
-  usually does not matter, but the release makes the choice for you.
+- **Patents:** the SpeedUp repository is public, and the Bucketization
+  branch has been visible since 2026-10-24 (first push around 12:00 UTC).
+  That already counts as public disclosure.
+  - In Europe, which has no general grace period, a patent on the disclosed
+    design is effectively ruled out.
+  - The US, Canada, Japan, Korea and Australia give the inventor 12 months
+    after their own disclosure, so until 2026-10-24 + 1 year. Talk to a
+    patent attorney soon if you want to keep that option.
+  - Otherwise the disclosure works as a defensive publication: others cannot
+    patent what is already public.
+  - Archive the repository on Software Heritage now for an independent
+    timestamp.
 - **How credit carries into each project:**
   - you author the commits from your own account, under your name;
   - every issue and merge request links the design doc;
@@ -118,13 +127,15 @@ would have to change before contributing. It gets no launch-day post.
 In each kit, the first post is the one that is useful to the project even if
 Bucketization is never merged. Order:
 
-1. **KDE Dolphin**: bug report about the non-transitive natural sort
-   (a real bug, with a reproducer).
+1. **KDE Dolphin**: bug report about the non-transitive natural sort.
 2. **KDE Krusader**: bug report about the descending comparator that is not a
    strict weak ordering.
 3. **lf**: issue about normalizing names on every comparison. Normalizing
-   once per sort makes name sorting 4–8× faster with the same order. Mention
-   Bucketization as the next step.
+   once per sort makes name sorting 4–8× faster with the same order.
+
+   Items 1–3 can go out **before** the launch. Their ready-to-file texts in
+   [tickets/](tickets/) don't mention Bucketization. On launch day, only link
+   to them from the other posts.
 4. **KDE**: one KDE Discuss post covering Dolphin, the file dialogs (KIO) and
    Krusader, with the numbers. Ask whether a benchmark merge request for
    Dolphin is welcome.

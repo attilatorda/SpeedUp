@@ -28,32 +28,22 @@ work is useful even if a later step is not accepted. Numbers come from
 
 ## Step 1: report the natural-sort cycle (bug report)
 
-Dolphin's natural comparison is not transitive for version-numbered names, so
-their order depends on the order the folder was listed in. Search
-bugs.kde.org first; if it is not reported, a report could read:
-
-> **Natural sorting is not transitive for version numbers; order depends on listing order**
->
-> `decimalAwareNaturalCompare()` treats a two-part number as a decimal
-> ("6.10" < "6.9") but compares two-part and three-part numbers part by part
-> ("6.9" < "6.9.1" < "6.10"). That creates cycles:
->
-> `kernel-6.10.tar.xz < kernel-6.9.tar.xz < kernel-6.9.1.tar.xz < kernel-6.10.tar.xz`
->
-> With a cyclic comparison the merge sort's result depends on the input
-> order, so the same folder can show these files in different orders. Found
-> with a stand-alone copy of the comparison (Dolphin commit `c5849f9`); a
-> program that prints the cycles is attached.
-
-Attach `benchmarks/kde_stack/find_comparator_cycles.cpp` (or its output). A
-fix has to pick one rule for two- vs three-part numbers. That is a design
+Dolphin's natural comparison is not transitive for version numbers, so their
+order depends on the order the folder was listed in. The cycle comes from
+`0d10eff3` (2026-04-02, BUG 411707). The ready-to-file report, re-checked on
+current master, is
+[launch/tickets/dolphin-natural-sort-cycle.md](launch/tickets/dolphin-natural-sort-cycle.md).
+It doesn't mention Bucketization, so it can be filed before the launch. A fix
+has to pick one rule for two- vs three-part numbers. That is a design
 decision for the maintainers, so offer a patch only once they say which rule
 they want.
 
 ## Step 2: a benchmark for changing the sort role (merge request)
 
-Dolphin's `src/tests/kfileitemmodelbenchmark.cpp` measures inserting items
-but not re-sorting when the user changes the sort role or order. Add
+Dolphin's `src/tests/kfileitemmodelbenchmark.cpp` measures inserting items,
+and since 2026-09-30 (`469570fb`) also sorting with natural sorting on
+(`sortManyItemsNaturally`). It does not measure re-sorting when the user
+changes the sort role or order. Add
 `changeSortRole` and `toggleSortOrder` cases (QBENCHMARK, 1,000 / 5,000 /
 50,000 items, natural sorting, folders first). This changes no behaviour, is
 easy to review, gives KDE its own baseline numbers, and introduces you to the

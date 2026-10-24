@@ -11,7 +11,9 @@
 #include <QCoreApplication>
 #include <QLocale>
 
+#include <algorithm>
 #include <cstdio>
+#include <set>
 #include <vector>
 
 #include "dolphin_sort.h"
@@ -48,5 +50,29 @@ int main(int argc, char** argv) {
         }
     }
     std::printf("%d cycle(s) found\n", cycles);
+
+    // What a user sees: Dolphin's own sort of the first three names, for every
+    // order the folder could be listed in.
+    if (items.size() >= 3) {
+        std::vector<int> perm = {0, 1, 2};
+        std::set<QString> shown;
+        do {
+            QList<dolphin::BenchItem*> list;
+            for (int i : perm) {
+                list.append(&items[static_cast<std::size_t>(i)]);
+            }
+            model.sort(list.begin(), list.end());
+            QString in, out;
+            for (int i : perm) {
+                in += names[i] + QLatin1Char(' ');
+            }
+            for (const dolphin::BenchItem* item : list) {
+                out += item->text + QLatin1Char(' ');
+            }
+            shown.insert(out);
+            std::printf("listed: %s-> shown: %s\n", qPrintable(in), qPrintable(out));
+        } while (std::next_permutation(perm.begin(), perm.end()));
+        std::printf("%zu different orders shown for %d listing orders\n", shown.size(), 6);
+    }
     return 0;
 }

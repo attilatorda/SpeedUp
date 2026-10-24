@@ -7,7 +7,7 @@
 | License | GPL-2.0-or-later. Bucketization under MIT fits |
 | AI policy (2026-10-24) | as for KDE in general (see [dolphin.md](dolphin.md)). Disclose |
 | Fit | high. Krusader owns its sort (`KrSort::Sorter`), and its comparison is expensive (`localeAwareCompare` on lowercased copies of the names) |
-| First post | the bug report below. Performance goes into the KDE Discuss post |
+| First post | the bug report in [../tickets/](../tickets/), filed before launch. Performance goes into the KDE Discuss post |
 
 ## Numbers
 
@@ -28,41 +28,13 @@ modified, ascending and descending.
 | photos-100k | 100,000 | 282–801 | 0.074–0.25 | 2,807–4,207× | 1.9–68 |
 <!-- /numbers -->
 
-## Day-0 post: bug report
+## Bug report (file before launch)
 
-Search first: bugs.kde.org, product krusader, for "itemGreaterThan",
-"descending" and "sort order".
-
-**Title:** Descending sort uses a comparator that is not a strict weak ordering (undefined behaviour in std::stable_sort)
-
-> `KrSort::itemGreaterThan(a, b)` is `!itemLessThan(a, b)`
-> (`app/Panel/PanelView/krsort.cpp`). For items that compare equal it
-> returns true both ways, and it returns true for an item compared with
-> itself. `std::stable_sort` (`Sorter::sort()`) and `std::lower_bound`
-> (`Sorter::insertIndex()`) require a strict weak ordering, so the result
-> is undefined. In practice, equal items come out in an arbitrary order.
->
-> Items compare equal in practice: with the default "ignore case", `README`
-> and `readme` are equal, and so are equal names in search results and
-> branch views.
->
-> **Reproducer:** <REPO_URL>/blob/<RELEASE_TAG>/benchmarks/qt_stack/krusader_descending_check.cpp
-> (a copy of the comparison). Built with `-D_GLIBCXX_DEBUG`, libstdc++'s
-> debug mode aborts inside `std::stable_sort` with "comparison doesn't meet
-> irreflexive requirements".
->
-> **Possible fix:** `return itemLessThan(sp2, sp);`. With both SortProps in
-> descending mode, this keeps folders and `..` first and reverses
-> everything else. It differs from today only for equal items.
->
-> A related case, with the non-default "always sort dirs by name": in
-> descending mode `itemLessThan()` XORs the name comparison with true,
-> which turns `<` into `>=` and makes `itemLessThan` itself reflexive for
-> equal folder names.
->
-> (Found while benchmarking a sorting design against Krusader's code:
-> <RELEASE_URL>. The benchmark code was written with an AI assistant; the
-> analysis is mine.)
+The ready-to-file text is in [../tickets/krusader-descending-comparator.md](../tickets/krusader-descending-comparator.md).
+It doesn't mention Bucketization, so it can go out before the launch. The
+fix it proposes is `return !itemLessThan(sp, sp2) && itemLessThan(sp2, sp);`.
+The simpler `itemLessThan(sp2, sp)` breaks "always sort dirs by name"; the
+ticket explains why.
 
 ## Follow-ups
 
