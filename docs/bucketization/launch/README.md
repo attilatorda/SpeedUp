@@ -41,18 +41,19 @@ Numbers come from [../cross-project-benchmarks.md](../cross-project-benchmarks.m
 - **It is credit, not control.** Publishing gives you authorship credit and
   makes the design prior art. Anyone may implement the idea. Copyright covers
   your code, not the algorithm.
-- **Patents:** the SpeedUp repository is public, and the Bucketization
-  branch has been visible since 2026-10-24 (first push around 12:00 UTC).
-  That already counts as public disclosure.
-  - In Europe, which has no general grace period, a patent on the disclosed
-    design is effectively ruled out.
+- **Patents and privacy:** this work was pushed to a branch of the public
+  SpeedUp repository on 2026-10-24 (first push around 12:00 UTC) and stays
+  visible until the branch is deleted there. That counts as public
+  disclosure, even if nobody looked:
+  - In Europe, which has no general grace period, it likely rules out a
+    patent on what was disclosed.
   - The US, Canada, Japan, Korea and Australia give the inventor 12 months
-    after their own disclosure, so until 2026-10-24 + 1 year. Talk to a
-    patent attorney soon if you want to keep that option.
-  - Otherwise the disclosure works as a defensive publication: others cannot
-    patent what is already public.
-  - Archive the repository on Software Heritage now for an independent
-    timestamp.
+    after their own disclosure, so until 2026-10-24 + 1 year.
+
+  Talk to a patent attorney before the public launch if you want that
+  option. Until you have decided, keep the work in a private repository and
+  do not archive it publicly (Software Heritage, Zenodo). The launch-day
+  archiving steps below assume that decision is made.
 - **How credit carries into each project:**
   - you author the commits from your own account, under your name;
   - every issue and merge request links the design doc;
