@@ -21,6 +21,12 @@ Implementations:
 The last part of this document is the cross-language specification that
 other ports (Python, C#, Rust, Kotlin, ...) follow.
 
+Related documents:
+
+- [benchmarks.md](benchmarks.md): measured against Dolphin's and GNOME's real sorting code on real folders
+- [file-manager-survey.md](file-manager-survey.md): how 12 file managers sort today, and where Bucketization fits
+- [kde-contribution-plan.md](kde-contribution-plan.md): steps towards a Dolphin contribution
+
 > **Name.** The interface is called `Bucketization`. "Bucketisation" (British
 > spelling) is just as correct; the `-ize` form matches the conventions of
 > Java, Qt/KDE and most libraries that use the term (TensorFlow's
@@ -73,7 +79,13 @@ other ports (Python, C#, Rust, Kotlin, ...) follow.
 - The order of a sort key is exact. Buckets only decide *when* elements get
   sorted, never *where* they end up.
 - Elements that compare equal keep insertion order (ascending).
-- Descending order is the exact reverse of ascending order.
+- If a comparator is inconsistent (has cycles, a < b < c < a), every element
+  is still returned exactly once and nothing crashes or throws; the order is
+  then as undefined as with any other sort. Only merge sorts are used inside
+  buckets for this reason.
+- Descending order is the exact reverse of ascending order, except for a
+  sort key's **groups** (see below): groups such as "folders, then files"
+  stay in that order, and only the order inside each group is reversed.
 - Positions (`at(i)` / `get(i)`) index the current order. Bucket ids always
   follow ascending key order.
 
@@ -88,6 +100,7 @@ conventions.
 |---------|------|------|
 | interface / implementation | `Bucketization<T>` / `BucketIndex<T>` | `Bucketization<T>` / `BucketIndex<T>` |
 | register a sort key | `add_sort_key(SortKey<T>)` | `addSortKey(SortKey<T>)` |
+| folders first in both directions | `SortKey::with_groups(n, fn)` | `SortKey.withGroups(n, fn)` |
 | choose the order | `sort_by(name, Direction)`, `unsort()` | `sortBy(name, Direction)`, `unsort()` |
 | read in order | `at(i)`, `range(from, to)`, `first_page()`, `for_each(fn)` | `get(i)`, `range(from, to)`, `firstPage()`, iterator, `asList()` |
 | find an element | `position_if(pred)`, `position_of(v)` | `positionIf(pred)`, `positionOf(o)` |
@@ -158,16 +171,30 @@ the same normalized key, and the tie-breaker orders them. The bucket layout
 handles such collisions (see below), so long shared prefixes like
 `IMG_20240101_…` or `Screenshot 2024-…` still give page-sized buckets.
 
-**Composite keys.** Several criteria can share one 64-bit key. File managers
-show folders first in both directions, but descending order reverses
-everything. So "folders first, newest first" is one key sorted ascending:
+**Groups: folders first in both directions.** File managers keep folders
+before files whichever way a column is sorted. `with_groups` / `withGroups`
+gives a sort key a few classes that keep ascending order in both
+directions; descending order reverses only the inside of each group:
 
 ```cpp
-bz::SortKey<Entry>::of_key("newest",
-    [](const Entry& e) { return (e.is_dir ? 0 : bz::keys::sign_bit)
-                              | (bz::keys::reverse(bz::keys::from_signed(e.modified)) >> 1); },
-    [](const Entry& a, const Entry& b) { return (a.modified < b.modified) - (a.modified > b.modified); });
+auto by_date = bz::SortKey<Entry>::of("modified", &Entry::modified)
+                   .with_groups(2, [](const Entry& e) { return e.is_dir ? 0u : 1u; });
+files.sort_by("modified", bz::Direction::descending);  // folders first, newest first
 ```
+
+```java
+SortKey<Entry> byDate = SortKey.<Entry>ofLong("modified", Entry::modified)
+        .withGroups(2, e -> e.isDir() ? 0 : 1);
+```
+
+Each group gets its own layout with page-sized end buckets, so the first
+descending page (the end of the folder group) is cheap too, and one
+pre-sort serves both directions. Up to 256 groups, e.g. 4 for "folders
+first, hidden last".
+
+**Composite keys.** Several criteria can also share one 64-bit key, e.g. a
+top bit for "folders first" and the timestamp below it. Prefer groups for
+anything that must not flip with the direction.
 
 ### Comparator-only sort keys
 
@@ -255,7 +282,12 @@ thread.
 
 ## Benchmarks
 
-`speedup_benchmark_bucketization` (C++) and `BucketizationBenchmark` (Java)
+**Against real file manager stacks**, see [benchmarks.md](benchmarks.md):
+Dolphin's own sorting code on Qt 6/ICU, and the GLib collation keys and
+`g_sequence_sort` used by Nautilus, Thunar, Nemo and Caja, on real
+directory listings (system folders, `node_modules`, the Linux kernel tree).
+
+**Synthetic micro-benchmark:** `speedup_benchmark_bucketization` (C++) and `BucketizationBenchmark` (Java)
 use synthetic directories: a third camera-style names (`IMG_20…`), a third
 `Document N.pdf`, a third random words, plus log-normal sizes and random
 timestamps. They report the median of several runs. See
@@ -266,11 +298,11 @@ elements:
 
 | Key | full `std::sort` | pre-sort (4 keys, once) | switch + first page | cached switch | switch + sort everything |
 |-----|------------------|--------------------------|---------------------|---------------|--------------------------|
-| name | 952 ms | 137 ms | 2.0 ms | 0.005 ms | 709 ms |
-| size | 400 ms | (same) | 2.3 ms | 0.005 ms | 137 ms |
-| modified | 395 ms | (same) | 1.9 ms | 0.004 ms | 127 ms |
+| name | 1,052 ms | 135 ms | 2.1 ms | 0.004 ms | 781 ms |
+| size | 416 ms | (same) | 1.8 ms | 0.005 ms | 145 ms |
+| modified | 448 ms | (same) | 2.1 ms | 0.005 ms | 151 ms |
 
-Showing the first page after a column switch is roughly 180–475× faster. Sorting
+Showing the first page after a column switch is roughly 210–500× faster. Sorting
 everything afterwards still costs less than one full sort, and pre-sorting
 all four keys costs less than one full sort of any of them.
 
@@ -298,11 +330,13 @@ Unsigned 64-bit, compared unsigned.
 
 ### S2. Exact order
 
-- keyed: `compare(a, b) = cmp_unsigned(key(a), key(b))`, then
-  `tie_break(a, b)` when the keys are equal (0 if there is no tie-breaker)
-- comparator-only: `compare(a, b) = comparator(a, b)`
+- groups (when the key has them): `group(a)` vs `group(b)` first
+- keyed: `cmp_unsigned(key(a), key(b))`, then `tie_break(a, b)` when the keys
+  are equal (0 if there is no tie-breaker)
+- comparator-only: `comparator(a, b)`
 - final tie-break: insertion order (ascending)
-- descending order is ascending order reversed
+- descending order: groups in ascending order, each group's elements in
+  reversed ascending order (without groups: the whole order reversed)
 
 ### S3. Target sizes `target_sizes(n)`
 
@@ -347,6 +381,11 @@ Default plan values: page 64, growth 2.0, max buckets 64, symmetric, sample
 
 ### S5. Split points
 
+With groups, every group gets its own layout from the elements in that group
+(in insertion order), using the plan with `max_buckets` capped at
+`65535 / groups`. The steps below run once per group, with `n` the size of
+the group and the sample drawn from the group's elements.
+
 1. `targets = target_sizes(n)`. If it has one bucket, the layout has no
    split points and expected sizes `[n]`.
 2. Sort the sample indices by the exact order (S2 without the insertion
@@ -369,8 +408,8 @@ Default plan values: page 64, growth 2.0, max buckets 64, symmetric, sample
 
 ### S6. Bucket assignment
 
-`bucket(x)` = number of split points `sp` with `sp ≤ x`, where
-`x < sp` means:
+`bucket(x)` = (number of buckets of the groups before `group(x)`) + number of
+split points `sp` of `group(x)`'s layout with `sp ≤ x`, where `x < sp` means:
 
 - comparator-only: `compare(x, element(sp)) < 0`
 - keyed: `key(x) < key(sp)` (unsigned), or `key(x) = key(sp)` and `sp` stores
@@ -412,6 +451,9 @@ additionally requires `changes since layout ≥ max(page, estimated_from / 8)`.
 - Not thread-safe. Sorting not-yet-visible buckets on a background thread
   would need a copy of the grouping or a lock.
 - One plan per index (not per sort key).
+- Pre-sorting is eager per registered key. Integrations should register a
+  column's key the first time it is used, and below about 2,000 items a
+  plain sort is just as fast (see benchmarks.md).
 - A C ABI (`speedup_bucket_*`) over numeric keys would let the existing
   bindings (Python, C#, Go, ...) reuse the C++ core. The comparator-only
   path needs callbacks across the ABI.

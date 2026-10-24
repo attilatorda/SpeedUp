@@ -131,7 +131,7 @@ public final class BucketIndex<T> implements Bucketization<T> {
             return item(position);
         }
         prepare(active);
-        int ascending = toAscending(position);
+        int ascending = toAscending(active, position);
         sortBucket(active, bucketAt(active, ascending));
         return item(active.order[ascending]);
     }
@@ -154,6 +154,20 @@ public final class BucketIndex<T> implements Bucketization<T> {
         }
         KeyState<T> state = active;
         prepare(state);
+        if (direction == Direction.DESCENDING && state.layouts.size() > 1) {
+            // Reversed inside each group: map position by position.
+            int sortedBucket = -1;
+            for (int p = from; p < to; p++) {
+                int ascending = toAscending(state, p);
+                int b = bucketAt(state, ascending);
+                if (b != sortedBucket) {
+                    sortBucket(state, b);
+                    sortedBucket = b;
+                }
+                out.add(item(state.order[ascending]));
+            }
+            return out;
+        }
         int lo = direction == Direction.ASCENDING ? from : size - to;
         int hi = direction == Direction.ASCENDING ? to : size - from;
         int lastBucket = bucketAt(state, hi - 1);
@@ -195,7 +209,7 @@ public final class BucketIndex<T> implements Bucketization<T> {
         sortBucket(state, bucket);
         for (int i = state.start[bucket]; i < state.start[bucket + 1]; i++) {
             if (state.order[i] == slot) {
-                return toAscending(i);
+                return toAscending(state, i);  // the mapping is its own inverse
             }
         }
         throw new IllegalStateException("slot missing from its bucket");
@@ -207,7 +221,7 @@ public final class BucketIndex<T> implements Bucketization<T> {
             return;
         }
         prepare(active);
-        for (int b = 0; b < active.layout.bucketCount(); b++) {
+        for (int b = 0; b < bucketTotal(active); b++) {
             sortBucket(active, b);
         }
     }
@@ -250,12 +264,12 @@ public final class BucketIndex<T> implements Bucketization<T> {
     @Override
     public int bucketOf(T element, String key) {
         KeyState<T> state = requireState(key);
-        return state.layout.bucketOf(element, state.key);
+        return bucketFor(state, element, state.keys != null ? state.key.key(element) : 0);
     }
 
     @Override
     public int bucketCount(String key) {
-        return requireState(key).layout.bucketCount();
+        return bucketTotal(requireState(key));
     }
 
     @Override
@@ -264,14 +278,15 @@ public final class BucketIndex<T> implements Bucketization<T> {
     }
 
     @Override
-    public BucketLayout<T> layout(String key) {
-        return requireState(key).layout;
+    public BucketLayout<T> layout(String key, int group) {
+        KeyState<T> state = requireState(key);
+        return state.layouts.get(Objects.checkIndex(group, state.layouts.size()));
     }
 
     @Override
     public BucketStats stats(String key) {
         KeyState<T> state = requireState(key);
-        int k = state.layout.bucketCount();
+        int k = bucketTotal(state);
         int empty = 0;
         int sorted = 0;
         double maxSkew = 0.0;
@@ -290,17 +305,24 @@ public final class BucketIndex<T> implements Bucketization<T> {
             costAscending += state.counts[b];
         }
         int costDescending = 0;
-        for (int b = k - 1; b >= 0 && costDescending < page; b--) {
-            costDescending += state.counts[b];
+        for (int g = 0; g < state.layouts.size() && costDescending < page; g++) {
+            for (int b = state.groupOffset[g + 1] - 1; b >= state.groupOffset[g] && costDescending < page; b--) {
+                costDescending += state.counts[b];
+            }
         }
-        return new BucketStats(state.key.name(), size, k, state.counts.clone(), state.layout.expectedSizes(), empty,
-                sorted, maxSkew, costAscending, costDescending, isStale(state));
+        return new BucketStats(state.key.name(), size, k, state.counts.clone(), state.expected.clone(), empty, sorted,
+                maxSkew, costAscending, costDescending, isStale(state));
     }
 
     @Override
     public int[] estimateBucketSizes(String key, BucketPlan plan) {
-        KeyState<T> state = requireState(key);
-        return BucketLayout.estimate(state.key, elementView(), state.keys, plan).expectedSizes();
+        List<Integer> sizes = new ArrayList<>();
+        for (BucketLayout<T> layout : estimateLayouts(requireState(key), plan)) {
+            for (int expected : layout.expectedSizes()) {
+                sizes.add(expected);
+            }
+        }
+        return sizes.stream().mapToInt(Integer::intValue).toArray();
     }
 
     @Override
@@ -435,7 +457,11 @@ public final class BucketIndex<T> implements Bucketization<T> {
         final SortKey<T> key;
         long[] keys;          // normalized key per slot (keyed sort keys only)
         char[] buckets;       // bucket id per slot, 16-bit unsigned
-        BucketLayout<T> layout = BucketLayout.single(0);
+        List<BucketLayout<T>> layouts = List.of(BucketLayout.single(0));  // one per group
+        BucketLayout<T> onlyLayout = layouts.get(0);  // the layout when there is one group (hot path)
+        int[] groupOffset = {0, 1};  // first bucket id of each group, plus the total
+        int[] expected = {0};        // expected size of every bucket (all groups)
+        int estimatedFrom;           // elements the layouts were estimated from
         int[] counts = {0};   // elements per bucket
         int churn;            // adds, removals and updates since the layout was made
         int staleCheckedAt = -1;
@@ -511,8 +537,74 @@ public final class BucketIndex<T> implements Bucketization<T> {
         return state;
     }
 
-    private int toAscending(int position) {
-        return direction == Direction.ASCENDING ? position : size - 1 - position;
+    private static int bucketTotal(KeyState<?> state) {
+        return state.groupOffset[state.groupOffset.length - 1];
+    }
+
+    /**
+     * Ascending position of a position in the current order. Descending order reverses positions
+     * inside each group, so the mapping is its own inverse.
+     */
+    private int toAscending(KeyState<T> state, int position) {
+        if (direction == Direction.ASCENDING) {
+            return position;
+        }
+        if (state.layouts.size() == 1) {
+            return size - 1 - position;
+        }
+        int lo = 0;
+        int hi = state.layouts.size();
+        while (lo < hi) {  // last group whose first position is <= position
+            int mid = (lo + hi) >>> 1;
+            if (state.start[state.groupOffset[mid]] <= position) {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        int g = lo - 1;
+        return state.start[state.groupOffset[g]] + (state.start[state.groupOffset[g + 1]] - 1 - position);
+    }
+
+    /** Global bucket id of {@code element}; {@code elementKey} is its normalized key (keyed sort keys). */
+    private int bucketFor(KeyState<T> state, T element, long elementKey) {
+        BucketLayout<T> only = state.onlyLayout;
+        if (only != null) {
+            return state.keys != null ? only.bucketOf(element, elementKey, state.key) : only.bucketOf(element, state.key);
+        }
+        int g = state.key.group(element);
+        BucketLayout<T> layout = state.layouts.get(g);
+        int local = state.keys != null ? layout.bucketOf(element, elementKey, state.key) : layout.bucketOf(element, state.key);
+        return state.groupOffset[g] + local;
+    }
+
+    /** One layout per group, each estimated from that group's elements. */
+    private List<BucketLayout<T>> estimateLayouts(KeyState<T> state, BucketPlan plan) {
+        int groups = state.key.groupCount();
+        if (groups == 1) {
+            return List.of(BucketLayout.estimate(state.key, elementView(), state.keys, plan));
+        }
+        int[] counts = new int[groups];
+        int[] groupOf = new int[size];
+        for (int slot = 0; slot < size; slot++) {
+            groupOf[slot] = state.key.group(item(slot));
+            counts[groupOf[slot]]++;
+        }
+        int[][] members = new int[groups][];
+        for (int g = 0; g < groups; g++) {
+            members[g] = new int[counts[g]];
+            counts[g] = 0;
+        }
+        for (int slot = 0; slot < size; slot++) {
+            members[groupOf[slot]][counts[groupOf[slot]]++] = slot;
+        }
+        // Bucket ids are 16-bit, shared by all groups.
+        BucketPlan perGroup = plan.withMaxBuckets(Math.min(plan.maxBuckets(), BucketPlan.MAX_BUCKET_LIMIT / groups));
+        List<BucketLayout<T>> layouts = new ArrayList<>(groups);
+        for (int g = 0; g < groups; g++) {
+            layouts.add(BucketLayout.estimate(state.key, elementView(), state.keys, perGroup, members[g]));
+        }
+        return layouts;
     }
 
     private static int bucketAt(KeyState<?> state, int ascendingPosition) {
@@ -531,11 +623,11 @@ public final class BucketIndex<T> implements Bucketization<T> {
     }
 
     private int skewFloor(KeyState<T> state, int bucket) {
-        return Math.max(Math.max(state.layout.expectedSize(bucket), plan.pageSize()), 1);
+        return Math.max(Math.max(state.expected[bucket], plan.pageSize()), 1);
     }
 
     private boolean isStale(KeyState<T> state) {
-        if (size > 2L * Math.max(state.layout.estimatedFrom(), plan.pageSize())) {
+        if (size > 2L * Math.max(state.estimatedFrom, plan.pageSize())) {
             return true;
         }
         for (int b = 0; b < state.counts.length; b++) {
@@ -552,7 +644,7 @@ public final class BucketIndex<T> implements Bucketization<T> {
             return;
         }
         state.staleCheckedAt = state.churn;
-        if (state.churn >= Math.max(plan.pageSize(), state.layout.estimatedFrom() / 8) && isStale(state)) {
+        if (state.churn >= Math.max(plan.pageSize(), state.estimatedFrom / 8) && isStale(state)) {
             relayout(state);
         }
     }
@@ -572,14 +664,31 @@ public final class BucketIndex<T> implements Bucketization<T> {
     }
 
     private void relayout(KeyState<T> state) {
-        state.layout = BucketLayout.estimate(state.key, elementView(), state.keys, plan);
-        state.splitterSlots = state.layout.splitterPositionsUnsafe().clone();
+        state.layouts = estimateLayouts(state, plan);
+        int groups = state.layouts.size();
+        state.onlyLayout = groups == 1 ? state.layouts.get(0) : null;
+        state.groupOffset = new int[groups + 1];
+        int splitters = 0;
+        for (int g = 0; g < groups; g++) {
+            state.groupOffset[g + 1] = state.groupOffset[g] + state.layouts.get(g).bucketCount();
+            splitters += state.layouts.get(g).splitterPositionsUnsafe().length;
+        }
+        state.expected = new int[bucketTotal(state)];
+        state.splitterSlots = new int[splitters];
+        splitters = 0;
+        for (int g = 0; g < groups; g++) {
+            BucketLayout<T> layout = state.layouts.get(g);
+            System.arraycopy(layout.expectedSizes(), 0, state.expected, state.groupOffset[g], layout.bucketCount());
+            int[] positions = layout.splitterPositionsUnsafe();
+            System.arraycopy(positions, 0, state.splitterSlots, splitters, positions.length);
+            splitters += positions.length;
+        }
         Arrays.sort(state.splitterSlots);
         state.splitterChanged = false;
-        state.counts = new int[state.layout.bucketCount()];
+        state.estimatedFrom = size;
+        state.counts = new int[bucketTotal(state)];
         for (int slot = 0; slot < size; slot++) {
-            int b = state.keys != null ? state.layout.bucketOf(item(slot), state.keys[slot], state.key)
-                    : state.layout.bucketOf(item(slot), state.key);
+            int b = bucketFor(state, item(slot), state.keys != null ? state.keys[slot] : 0);
             state.buckets[slot] = (char) b;
             state.counts[b]++;
         }
@@ -613,14 +722,12 @@ public final class BucketIndex<T> implements Bucketization<T> {
         items[slot] = element;
         size++;
         for (KeyState<T> state : states) {
-            int b;
+            long k = 0;
             if (state.keys != null) {
-                long k = state.key.key(element);
+                k = state.key.key(element);
                 state.keys[slot] = k;
-                b = state.layout.bucketOf(element, k, state.key);
-            } else {
-                b = state.layout.bucketOf(element, state.key);
             }
+            int b = bucketFor(state, element, k);
             state.buckets[slot] = (char) b;
             state.counts[b]++;
             state.churn++;
@@ -631,13 +738,10 @@ public final class BucketIndex<T> implements Bucketization<T> {
     }
 
     private void rekey(KeyState<T> state, int slot) {
-        int b;
         if (state.keys != null) {
             state.keys[slot] = state.key.key(item(slot));
-            b = state.layout.bucketOf(item(slot), state.keys[slot], state.key);
-        } else {
-            b = state.layout.bucketOf(item(slot), state.key);
         }
+        int b = bucketFor(state, item(slot), state.keys != null ? state.keys[slot] : 0);
         state.counts[state.buckets[slot]]--;
         state.buckets[slot] = (char) b;
         state.counts[b]++;
@@ -661,7 +765,7 @@ public final class BucketIndex<T> implements Bucketization<T> {
 
     /** Counting sort of all slots by bucket id. Nothing is sorted yet. */
     private void buildOrder(KeyState<T> state) {
-        int k = state.layout.bucketCount();
+        int k = bucketTotal(state);
         state.start = bucketStarts(state.counts);
         int[] fill = Arrays.copyOf(state.start, k);
         state.order = new int[size];
@@ -681,7 +785,7 @@ public final class BucketIndex<T> implements Bucketization<T> {
      * survived is still sorted. Added and updated slots go to the (unsorted) back of their bucket.
      */
     private void regroup(KeyState<T> state) {
-        int k = state.layout.bucketCount();
+        int k = bucketTotal(state);
         int[] start = bucketStarts(state.counts);
         int[] fill = Arrays.copyOf(start, k);
         int[] sortedLen = new int[k];
@@ -746,7 +850,7 @@ public final class BucketIndex<T> implements Bucketization<T> {
         if (!state.hasOrder) {
             return;
         }
-        int k = state.layout.bucketCount();
+        int k = bucketTotal(state);
         int out = 0;
         int[] start = new int[k + 1];
         for (int b = 0; b < k; b++) {

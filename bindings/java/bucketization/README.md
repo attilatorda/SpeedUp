@@ -36,7 +36,7 @@ List<FileItem> rows = files.range(0, visibleRows); // sorts only the bucket(s) o
 |-------|------|
 | `Bucketization<T>` | the interface |
 | `BucketIndex<T>` | reference implementation |
-| `SortKey<T>` | a sort criterion: `ofLong`, `ofDouble`, `ofString`, `ofStringIgnoreCase`, `ofCollated`, `ofKey`, `ofComparator` |
+| `SortKey<T>` | a sort criterion: `ofLong`, `ofDouble`, `ofString`, `ofStringIgnoreCase`, `ofCollated`, `ofKey`, `ofComparator`; `withGroups` keeps folders first in both directions |
 | `Keys` | order-preserving 64-bit key encodings for custom keys |
 | `BucketPlan` | target bucket sizes: `defaults`, `firstPage`, `geometric`, `uniform`, `ofSizes` |
 | `BucketLayout<T>` | split points and expected bucket sizes (the distribution model) |

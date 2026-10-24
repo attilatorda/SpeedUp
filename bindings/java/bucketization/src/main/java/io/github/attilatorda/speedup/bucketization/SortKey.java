@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.function.ToDoubleFunction;
+import java.util.function.ToIntFunction;
 import java.util.function.ToLongFunction;
 
 /**
@@ -22,23 +23,39 @@ import java.util.function.ToLongFunction;
  *       costs O(log buckets) comparator calls, paid once when the element is added.
  * </ul>
  *
- * <p>A sort key is itself a {@link Comparator} for the exact order it defines.
+ * <p>Either kind can have <b>groups</b> ({@link #withGroups}): a small number of classes, such as
+ * folders and files, that stay in ascending group order in both directions. Descending order then
+ * reverses the order inside each group only, which is how file managers keep folders first.
+ *
+ * <p>A sort key is itself a {@link Comparator} for the exact (ascending) order it defines.
  *
  * @param <T> element type
  */
 public final class SortKey<T> implements Comparator<T> {
 
+    /** Most groups a sort key can have. */
+    public static final int MAX_GROUPS = 256;
+
     private final String name;
     private final ToLongFunction<? super T> keyFunction;
     private final Comparator<? super T> comparator;
+    private final int groups;
+    private final ToIntFunction<? super T> groupFunction;
 
     private SortKey(String name, ToLongFunction<? super T> keyFunction, Comparator<? super T> comparator) {
+        this(name, keyFunction, comparator, 1, null);
+    }
+
+    private SortKey(String name, ToLongFunction<? super T> keyFunction, Comparator<? super T> comparator, int groups,
+                    ToIntFunction<? super T> groupFunction) {
         this.name = Objects.requireNonNull(name, "name");
         if (name.isEmpty()) {
             throw new IllegalArgumentException("SortKey: name must not be empty");
         }
         this.keyFunction = keyFunction;
         this.comparator = comparator;
+        this.groups = groups;
+        this.groupFunction = groupFunction;
     }
 
     /**
@@ -99,8 +116,36 @@ public final class SortKey<T> implements Comparator<T> {
                 (a, b) -> own.getCollationKey(value.apply(a)).compareTo(own.getCollationKey(value.apply(b))));
     }
 
+    /**
+     * Copy of this sort key whose elements are first ordered by {@code group.applyAsInt(element)},
+     * a value in [0, groups), in both directions.
+     */
+    public SortKey<T> withGroups(int groups, ToIntFunction<? super T> group) {
+        if (groups < 1 || groups > MAX_GROUPS) {
+            throw new IllegalArgumentException("SortKey.withGroups: groups must be in [1, 256]");
+        }
+        return new SortKey<>(name, keyFunction, comparator, groups, Objects.requireNonNull(group, "group"));
+    }
+
     public String name() {
         return name;
+    }
+
+    /** Number of groups; 1 when the sort key has none. */
+    public int groupCount() {
+        return groups;
+    }
+
+    /**
+     * Group of {@code element}.
+     *
+     * @throws IndexOutOfBoundsException if the group function returns a value outside [0, groupCount())
+     */
+    public int group(T element) {
+        if (groupFunction == null) {
+            return 0;
+        }
+        return Objects.checkIndex(groupFunction.applyAsInt(element), groups);
     }
 
     /** True for keyed sort keys. */
@@ -128,9 +173,15 @@ public final class SortKey<T> implements Comparator<T> {
         return comparator == null ? 0 : comparator.compare(a, b);
     }
 
-    /** The exact order this sort key defines. */
+    /** The exact (ascending) order this sort key defines: group, then key, then tie-breaker. */
     @Override
     public int compare(T a, T b) {
+        if (groupFunction != null) {
+            int c = Integer.compare(group(a), group(b));
+            if (c != 0) {
+                return c;
+            }
+        }
         if (keyFunction != null) {
             int c = Long.compareUnsigned(keyFunction.applyAsLong(a), keyFunction.applyAsLong(b));
             if (c != 0) {

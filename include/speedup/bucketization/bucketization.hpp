@@ -44,8 +44,10 @@ struct BucketStats {
 ///
 /// Positions are indexes into the current order (sort key and direction).
 /// Bucket ids always follow ascending key order. Descending order is the
-/// exact reverse of ascending order. Equal elements keep insertion order in
-/// ascending order.
+/// exact reverse of ascending order, except that a sort key's groups
+/// (SortKey::with_groups, e.g. folders before files) keep their order and
+/// only the order inside each group is reversed. Equal elements keep
+/// insertion order in ascending order.
 ///
 /// Reads may sort lazily, so they are not const and implementations are not
 /// thread-safe. Elements must not be changed in a way that affects their
@@ -122,8 +124,10 @@ public:
     /// Current number of elements per bucket.
     virtual std::vector<std::size_t> bucket_sizes(std::string_view key) const = 0;
 
-    /// Current boundaries and expected sizes.
-    virtual const BucketLayout<T>& layout(std::string_view key) const = 0;
+    /// Current boundaries and expected sizes of one group's buckets (the
+    /// whole key when it has no groups). Bucket ids of group g start after
+    /// the buckets of groups 0..g-1.
+    virtual const BucketLayout<T>& layout(std::string_view key, std::size_t group = 0) const = 0;
 
     virtual BucketStats stats(std::string_view key) const = 0;
 

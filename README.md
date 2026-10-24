@@ -89,6 +89,9 @@ int main(void) {
 ## Documentation index
 - Architecture: `docs/architecture/overview.md`
 - Bucketization design and cross-language spec: `docs/bucketization/README.md`
+- Bucketization benchmarks against real file manager stacks (Dolphin, GNOME family): `docs/bucketization/benchmarks.md`
+- How file managers sort today, and where to contribute: `docs/bucketization/file-manager-survey.md`
+- Plan for contributing to KDE Dolphin: `docs/bucketization/kde-contribution-plan.md`
 - Benchmark analysis: `docs/papers/binary_search_results_analysis.md`
 - Benchmark methodology baseline: `BENCHMARKS.md`
 - API docs (Doxygen): `docs/api/README.md`

@@ -4,7 +4,6 @@ import io.github.attilatorda.speedup.bucketization.BucketIndex;
 import io.github.attilatorda.speedup.bucketization.BucketPlan;
 import io.github.attilatorda.speedup.bucketization.BucketStats;
 import io.github.attilatorda.speedup.bucketization.Direction;
-import io.github.attilatorda.speedup.bucketization.Keys;
 import io.github.attilatorda.speedup.bucketization.SortKey;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -98,12 +97,8 @@ public final class FileBrowserDemo {
         index.addSortKey(SortKey.ofCollated("name", Entry::name, Collator.getInstance()));
         index.addSortKey(SortKey.ofComparator("natural", Comparator.comparing(Entry::name, NATURAL)));
         index.addSortKey(SortKey.ofLong("size", Entry::size));
-        // Folders first, newest first. Descending order reverses everything (folders would go
-        // last), so this is one composite key sorted ascending: the top bit separates folders, the
-        // rest is the reversed timestamp. The shift drops one bit; the tie-breaker restores it.
-        index.addSortKey(SortKey.ofKey("newest",
-                e -> (e.directory() ? 0 : Long.MIN_VALUE) | (Keys.reverse(Keys.fromSigned(e.modifiedMillis())) >>> 1),
-                Comparator.comparingLong(Entry::modifiedMillis).reversed()));
+        // Folders stay first in both directions: a group, not part of the key.
+        index.addSortKey(SortKey.<Entry>ofLong("modified", Entry::modifiedMillis).withGroups(2, e -> e.directory() ? 0 : 1));
         index.addAll(entries);  // pre-sorting: every entry picks a bucket per sort key
 
         System.out.printf("%d entries in %s%n", index.size(), root);
@@ -111,7 +106,7 @@ public final class FileBrowserDemo {
         printPage(index, rows);
         index.sortBy("size", Direction.DESCENDING);
         printPage(index, rows);
-        index.sortBy("newest");
+        index.sortBy("modified", Direction.DESCENDING);  // folders first, newest first
         printPage(index, rows);
         index.sortBy("name");
         printPage(index, rows);

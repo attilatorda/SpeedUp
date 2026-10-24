@@ -94,16 +94,30 @@ std::vector<bz::SortKey<Rec>> make_keys() {
     keys.push_back(bz::SortKey<Rec>::of_key(
         "size_then_score", [](const Rec& r) { return bz::keys::from_signed(r.size); },
         [](const Rec& a, const Rec& b) { return (a.score > b.score) - (a.score < b.score); }));
+    // Groups ("folders first" in both directions), keyed and comparator-only.
+    keys.push_back(bz::SortKey<Rec>::of("name_folders_first", &Rec::name)
+                       .with_groups(2, [](const Rec& r) { return r.id % 3 == 0 ? std::size_t{0} : std::size_t{1}; }));
+    keys.push_back(bz::SortKey<Rec>::of_comparator("score_in_3_groups",
+                                                  [](const Rec& a, const Rec& b) {
+                                                      return (a.score > b.score) - (a.score < b.score);
+                                                  })
+                       .with_groups(3, [](const Rec& r) { return static_cast<std::size_t>(r.id % 3); }));
     return keys;
 }
 
 /// Reference order: stable sort of the elements in insertion order.
+/// Descending reverses the order inside each group (the whole list when ungrouped).
 std::vector<int> reference_ids(const std::vector<Rec>& items, const bz::SortKey<Rec>& key, bz::Direction dir) {
     std::vector<Rec> sorted = items;
     std::stable_sort(sorted.begin(), sorted.end(),
                      [&](const Rec& a, const Rec& b) { return key.compare(a, b) < 0; });
     if (dir == bz::Direction::descending) {
-        std::reverse(sorted.begin(), sorted.end());
+        for (auto first = sorted.begin(); first != sorted.end();) {
+            const std::size_t g = key.group(*first);
+            auto last = std::find_if(first, sorted.end(), [&](const Rec& r) { return key.group(r) != g; });
+            std::reverse(first, last);
+            first = last;
+        }
     }
     std::vector<int> ids;
     for (const Rec& r : sorted) {
@@ -584,6 +598,98 @@ void test_handle_elements() {
     CHECK(got == expected);
 }
 
+/// Folders first in both directions, with one pre-sort per key.
+void test_groups() {
+    struct Entry {
+        std::string name;
+        bool dir;
+    };
+    bz::BucketIndex<Entry> index(bz::BucketPlan::defaults().with_page_size(4));
+    index.add_sort_key(bz::SortKey<Entry>::of("name", &Entry::name).with_groups(2, [](const Entry& e) {
+        return e.dir ? std::size_t{0} : std::size_t{1};
+    }));
+    std::vector<Entry> entries;
+    for (int i = 0; i < 300; ++i) {
+        entries.push_back({"f" + std::to_string(1000 + i), false});
+        if (i % 10 == 0) {
+            entries.push_back({"d" + std::to_string(1000 + i), true});
+        }
+    }
+    index.add_all(entries);
+    CHECK(index.layout("name", 0).estimated_from() == 30);
+    CHECK(index.layout("name", 1).estimated_from() == 300);
+    CHECK(throws([&] { index.layout("name", 2); }));
+    index.sort_by("name", bz::Direction::descending);
+    CHECK(index.at(0).name == "d1290");   // folders still first, newest name first
+    CHECK(index.at(29).name == "d1000");
+    CHECK(index.at(30).name == "f1299");
+    CHECK(index.at(329).name == "f1000");
+    const auto page = index.range(28, 32);
+    CHECK(page.size() == 4 && page[0].name == "d1010" && page[1].name == "d1000" && page[2].name == "f1299" &&
+          page[3].name == "f1298");
+    const auto stats = index.stats("name");
+    CHECK(stats.first_page_cost_descending < 40);  // the end of the folder group, not the middle of everything
+    index.sort_by("name", bz::Direction::ascending);
+    CHECK(index.at(0).name == "d1000");
+    CHECK(index.at(30).name == "f1000");
+    std::size_t found = *index.position_if([](const Entry& e) { return e.name == "f1001"; });
+    CHECK(found == 31);
+    index.sort_by("name", bz::Direction::descending);
+    found = *index.position_if([](const Entry& e) { return e.name == "f1001"; });
+    CHECK(found == 328);
+}
+
+/// A comparator with cycles (rock-paper-scissors) must not crash the index or
+/// lose elements. Real comparators have such bugs: Dolphin's natural compare
+/// orders kernel-6.10 < kernel-6.9 < kernel-6.9.1 < kernel-6.10.
+void test_inconsistent_comparator() {
+    auto rps = [](const Rec& a, const Rec& b) {
+        const int x = a.id % 3;
+        const int y = b.id % 3;
+        if (x == y) {
+            return (a.id > b.id) - (a.id < b.id);
+        }
+        return (x + 1) % 3 == y ? -1 : 1;
+    };
+    // Antisymmetric but otherwise random per pair: cycles everywhere.
+    auto chaos = [](const Rec& a, const Rec& b) {
+        if (a.id == b.id) {
+            return 0;
+        }
+        const auto lo = static_cast<std::uint64_t>(std::min(a.id, b.id));
+        const auto hi = static_cast<std::uint64_t>(std::max(a.id, b.id));
+        std::uint64_t h = (lo * 0x9E3779B97F4A7C15ULL) ^ (hi * 0xC2B2AE3D27D4EB4FULL);
+        h ^= h >> 29;
+        const int sign = (h & 1) == 0 ? -1 : 1;
+        return a.id < b.id ? sign : -sign;
+    };
+    bz::BucketIndex<Rec> index(bz::BucketPlan::defaults().with_page_size(8));
+    index.add_sort_key(bz::SortKey<Rec>::of_comparator("rps", rps));
+    index.add_sort_key(bz::SortKey<Rec>::of_key("rps_tie", [](const Rec&) { return std::uint64_t{7}; }, rps));
+    index.add_sort_key(bz::SortKey<Rec>::of_comparator("chaos", chaos));
+    index.add_sort_key(bz::SortKey<Rec>::of_key("chaos_tie", [](const Rec&) { return std::uint64_t{7}; }, chaos));
+    std::vector<Rec> batch;
+    for (int i = 0; i < 5000; ++i) {
+        Rec r;
+        r.id = i;
+        batch.push_back(r);
+    }
+    index.add_all(batch);
+    for (const char* key : {"rps", "rps_tie", "chaos", "chaos_tie"}) {
+        for (auto dir : {bz::Direction::ascending, bz::Direction::descending}) {
+            index.sort_by(key, dir);
+            std::vector<int> ids;
+            index.for_each([&](const Rec& r) { ids.push_back(r.id); });
+            std::sort(ids.begin(), ids.end());
+            bool permutation = ids.size() == batch.size();
+            for (std::size_t i = 0; permutation && i < ids.size(); ++i) {
+                permutation = ids[i] == static_cast<int>(i);
+            }
+            CHECK(permutation);
+        }
+    }
+}
+
 void test_edges() {
     bz::BucketIndex<Rec> index;
     CHECK(index.size() == 0);
@@ -593,6 +699,12 @@ void test_edges() {
     index.add_sort_key(bz::SortKey<Rec>::of("name", &Rec::name));
     CHECK(throws([&] { index.add_sort_key(bz::SortKey<Rec>::of("name", &Rec::name)); }));
     CHECK(throws([] { bz::SortKey<Rec>::of_key("", [](const Rec&) { return std::uint64_t{0}; }); }));
+    CHECK(throws([] { bz::SortKey<Rec>::of("x", &Rec::size).with_groups(0, [](const Rec&) { return std::size_t{0}; }); }));
+    {
+        bz::BucketIndex<Rec> bad;
+        bad.add_sort_key(bz::SortKey<Rec>::of("g", &Rec::size).with_groups(2, [](const Rec&) { return std::size_t{7}; }));
+        CHECK(throws([&] { bad.add(Rec{1, "a", 0, 0}); }));
+    }
     index.sort_by("name");
     CHECK(index.first_page().empty());
     CHECK(index.range(5, 2).empty());
@@ -631,6 +743,8 @@ int main() {
     test_colliding_prefix_keys();
     test_rebalance_and_skew();
     test_handle_elements();
+    test_groups();
+    test_inconsistent_comparator();
     test_edges();
     if (g_failures != 0) {
         std::fprintf(stderr, "%d check(s) failed\n", g_failures);

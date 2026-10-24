@@ -27,11 +27,20 @@ namespace speedup::bucketization {
 ///   O(log buckets) comparator calls, paid once when the element is added.
 ///
 /// Comparators are three-way: negative, zero or positive, like `strcmp`.
+///
+/// Either kind can have **groups** (`with_groups`): a small number of
+/// classes, such as folders and files, that stay in ascending group order in
+/// both directions. Descending order then reverses the order inside each
+/// group only, which is how file managers keep folders first.
 template <class T>
 class SortKey {
 public:
     using KeyFunction = std::function<std::uint64_t(const T&)>;
     using CompareFunction = std::function<int(const T&, const T&)>;
+    using GroupFunction = std::function<std::size_t(const T&)>;
+
+    /// Most groups a sort key can have.
+    static constexpr std::size_t max_groups = 256;
 
     /// Keyed sort key. `key` must return a normalized key; `tie_breaker`
     /// (optional) orders elements whose keys are equal, which is where a
@@ -75,7 +84,38 @@ public:
         }
     }
 
+    /// Copy of this sort key whose elements are first ordered by
+    /// `group(element)`, a value in [0, groups), in both directions.
+    SortKey with_groups(std::size_t groups, GroupFunction group) const {
+        if (groups == 0 || groups > max_groups) {
+            throw std::invalid_argument("SortKey::with_groups: groups must be in [1, 256]");
+        }
+        if (!group) {
+            throw std::invalid_argument("SortKey::with_groups: group function is empty");
+        }
+        SortKey copy = *this;
+        copy.groups_ = groups;
+        copy.group_ = std::move(group);
+        return copy;
+    }
+
     const std::string& name() const noexcept { return name_; }
+
+    /// Number of groups; 1 when the sort key has none.
+    std::size_t group_count() const noexcept { return groups_; }
+
+    /// Group of `value`. Throws std::out_of_range if the group function
+    /// returns a value outside [0, group_count()).
+    std::size_t group(const T& value) const {
+        if (!group_) {
+            return 0;
+        }
+        const std::size_t g = group_(value);
+        if (g >= groups_) {
+            throw std::out_of_range("SortKey '" + name_ + "': group out of range");
+        }
+        return g;
+    }
 
     /// True for keyed sort keys.
     bool has_key() const noexcept { return static_cast<bool>(key_); }
@@ -87,8 +127,16 @@ public:
     /// (comparator-only). Returns 0 when there is no tie-breaker.
     int tie_break(const T& a, const T& b) const { return compare_ ? compare_(a, b) : 0; }
 
-    /// The exact order this sort key defines.
+    /// The exact (ascending) order this sort key defines: group, then key,
+    /// then tie-breaker.
     int compare(const T& a, const T& b) const {
+        if (group_) {
+            const std::size_t ga = group(a);
+            const std::size_t gb = group(b);
+            if (ga != gb) {
+                return ga < gb ? -1 : 1;
+            }
+        }
         if (key_) {
             const std::uint64_t ka = key_(a);
             const std::uint64_t kb = key_(b);
@@ -110,6 +158,8 @@ private:
     std::string name_;
     KeyFunction key_;
     CompareFunction compare_;
+    std::size_t groups_ = 1;
+    GroupFunction group_;
 };
 
 }  // namespace speedup::bucketization

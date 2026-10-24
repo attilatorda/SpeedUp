@@ -16,8 +16,10 @@ import java.util.function.Predicate;
  * showing the first rows therefore pays for O(n + page log page) work instead of O(n log n).
  *
  * <p>Positions are indexes into the current order (sort key and direction). Bucket ids always
- * follow ascending key order. Descending order is the exact reverse of ascending order. Equal
- * elements keep insertion order in ascending order.
+ * follow ascending key order. Descending order is the exact reverse of ascending order, except that
+ * a sort key's groups ({@link SortKey#withGroups}, e.g. folders before files) keep their order and
+ * only the order inside each group is reversed. Equal elements keep insertion order in ascending
+ * order.
  *
  * <p>Reads may sort lazily, so implementations are not thread-safe, not even for concurrent
  * reads. Elements must not be changed in a way that affects their order without calling {@link
@@ -108,8 +110,18 @@ public interface Bucketization<T> extends Iterable<T> {
     /** Current number of elements per bucket. */
     int[] bucketSizes(String key);
 
-    /** Current boundaries and expected sizes. */
-    BucketLayout<T> layout(String key);
+    /** Current boundaries and expected sizes (group 0, i.e. the whole key when it has no groups). */
+    default BucketLayout<T> layout(String key) {
+        return layout(key, 0);
+    }
+
+    /**
+     * Boundaries and expected sizes of one group's buckets. Bucket ids of group g start after the
+     * buckets of groups 0..g-1.
+     *
+     * @throws IndexOutOfBoundsException if the sort key has fewer groups
+     */
+    BucketLayout<T> layout(String key, int group);
 
     BucketStats stats(String key);
 

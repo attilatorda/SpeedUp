@@ -67,6 +67,33 @@ target_link_libraries(speedup_bucketization_test PRIVATE speedup_bucketization)
 if(SPEEDUP_BUILD_BENCHMARKS)
     add_executable(speedup_benchmark_bucketization benchmarks/core/benchmark_bucketization.cpp)
     target_link_libraries(speedup_benchmark_bucketization PRIVATE speedup_bucketization)
+
+    # Bucketization against real file manager stacks (optional dependencies).
+    # KDE Dolphin: Qt 6 QCollator on ICU, Dolphin's comparison and parallel merge sort.
+    find_package(Qt6 QUIET COMPONENTS Core Concurrent)
+    find_package(ICU QUIET COMPONENTS uc i18n)
+    if(Qt6_FOUND AND ICU_FOUND)
+        add_executable(speedup_benchmark_dolphin_stack benchmarks/kde_stack/benchmark_dolphin_stack.cpp)
+        target_link_libraries(speedup_benchmark_dolphin_stack PRIVATE
+            speedup_bucketization Qt6::Core Qt6::Concurrent ICU::uc ICU::i18n)
+        add_executable(speedup_verify_icu_key benchmarks/kde_stack/verify_icu_key.cpp)
+        target_link_libraries(speedup_verify_icu_key PRIVATE Qt6::Core Qt6::Concurrent ICU::uc ICU::i18n)
+        add_executable(speedup_find_comparator_cycles benchmarks/kde_stack/find_comparator_cycles.cpp)
+        target_link_libraries(speedup_find_comparator_cycles PRIVATE Qt6::Core Qt6::Concurrent)
+    else()
+        message(STATUS "Qt 6 or ICU not found: skipping speedup_benchmark_dolphin_stack")
+    endif()
+    # GNOME family (Nautilus, Thunar, Nemo, Caja): GLib collation keys and GSequence.
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(GLIB QUIET IMPORTED_TARGET glib-2.0)
+    endif()
+    if(GLIB_FOUND)
+        add_executable(speedup_benchmark_glib_stack benchmarks/gnome_stack/benchmark_glib_stack.cpp)
+        target_link_libraries(speedup_benchmark_glib_stack PRIVATE speedup_bucketization PkgConfig::GLIB)
+    else()
+        message(STATUS "GLib not found: skipping speedup_benchmark_glib_stack")
+    endif()
 endif()
 
 if(SPEEDUP_BUILD_EXAMPLES)

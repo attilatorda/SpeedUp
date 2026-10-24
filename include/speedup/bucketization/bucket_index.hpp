@@ -107,7 +107,7 @@ public:
         }
         KeyState& state = states_[active_];
         prepare(state);
-        const std::size_t ascending = to_ascending(position);
+        const std::size_t ascending = to_ascending(state, position);
         sort_bucket(state, bucket_at(state, ascending));
         return items_[state.order[ascending]];
     }
@@ -126,6 +126,20 @@ public:
         }
         KeyState& state = states_[active_];
         prepare(state);
+        if (direction_ == Direction::descending && state.layouts.size() > 1) {
+            // Reversed inside each group: map position by position.
+            std::size_t sorted_bucket = npos;
+            for (std::size_t p = from; p < to; ++p) {
+                const std::size_t ascending = to_ascending(state, p);
+                const std::size_t b = bucket_at(state, ascending);
+                if (b != sorted_bucket) {
+                    sort_bucket(state, b);
+                    sorted_bucket = b;
+                }
+                out.push_back(items_[state.order[ascending]]);
+            }
+            return out;
+        }
         const std::size_t n = items_.size();
         const std::size_t lo = direction_ == Direction::ascending ? from : n - to;
         const std::size_t hi = direction_ == Direction::ascending ? to : n - from;
@@ -165,7 +179,7 @@ public:
         const auto begin = state.order.begin() + static_cast<std::ptrdiff_t>(state.start[bucket]);
         const auto end = state.order.begin() + static_cast<std::ptrdiff_t>(state.start[bucket + 1]);
         const auto it = std::find(begin, end, static_cast<Slot>(slot));
-        return to_ascending(static_cast<std::size_t>(it - state.order.begin()));
+        return to_ascending(state, static_cast<std::size_t>(it - state.order.begin()));  // the mapping is its own inverse
     }
 
     void for_each(const Visitor& visit) override {
@@ -177,18 +191,21 @@ public:
         }
         KeyState& state = states_[active_];
         prepare(state);
-        const std::size_t k = state.layout.bucket_count();
-        for (std::size_t i = 0; i < k; ++i) {
-            const std::size_t b = direction_ == Direction::ascending ? i : k - 1 - i;
-            sort_bucket(state, b);
-            const std::size_t lo = state.start[b];
-            const std::size_t hi = state.start[b + 1];
-            if (direction_ == Direction::ascending) {
-                for (std::size_t p = lo; p < hi; ++p) {
+        const std::size_t k = bucket_total(state);
+        if (direction_ == Direction::ascending) {
+            for (std::size_t b = 0; b < k; ++b) {
+                sort_bucket(state, b);
+                for (std::size_t p = state.start[b]; p < state.start[b + 1]; ++p) {
                     visit(items_[state.order[p]]);
                 }
-            } else {
-                for (std::size_t p = hi; p-- > lo;) {
+            }
+            return;
+        }
+        // Groups stay in ascending order; buckets and elements inside each group run backwards.
+        for (std::size_t g = 0; g < state.layouts.size(); ++g) {
+            for (std::size_t b = state.group_offset[g + 1]; b-- > state.group_offset[g];) {
+                sort_bucket(state, b);
+                for (std::size_t p = state.start[b + 1]; p-- > state.start[b];) {
                     visit(items_[state.order[p]]);
                 }
             }
@@ -201,7 +218,7 @@ public:
         }
         KeyState& state = states_[active_];
         prepare(state);
-        for (std::size_t b = 0; b < state.layout.bucket_count(); ++b) {
+        for (std::size_t b = 0; b < bucket_total(state); ++b) {
             sort_bucket(state, b);
         }
     }
@@ -210,19 +227,23 @@ public:
 
     std::size_t bucket_of(const T& value, std::string_view key) const override {
         const KeyState& state = states_[require_state(key)];
-        return state.layout.bucket_of(value, state.key);
+        return bucket_for(state, value, state.key.has_key() ? state.key.key(value) : 0);
     }
 
     std::size_t bucket_count(std::string_view key) const override {
-        return states_[require_state(key)].layout.bucket_count();
+        return bucket_total(states_[require_state(key)]);
     }
 
     std::vector<std::size_t> bucket_sizes(std::string_view key) const override {
         return states_[require_state(key)].counts;
     }
 
-    const BucketLayout<T>& layout(std::string_view key) const override {
-        return states_[require_state(key)].layout;
+    const BucketLayout<T>& layout(std::string_view key, std::size_t group = 0) const override {
+        const KeyState& state = states_[require_state(key)];
+        if (group >= state.layouts.size()) {
+            throw std::out_of_range("BucketIndex::layout: group out of range");
+        }
+        return state.layouts[group];
     }
 
     BucketStats stats(std::string_view key) const override {
@@ -230,9 +251,9 @@ public:
         BucketStats out;
         out.key_name = state.key.name();
         out.size = items_.size();
-        out.bucket_count = state.layout.bucket_count();
+        out.bucket_count = bucket_total(state);
         out.actual_sizes = state.counts;
-        out.expected_sizes = state.layout.expected_sizes();
+        out.expected_sizes = state.expected;
         for (std::size_t b = 0; b < out.bucket_count; ++b) {
             if (state.counts[b] == 0) {
                 ++out.empty_buckets;
@@ -247,16 +268,22 @@ public:
         for (std::size_t b = 0; b < out.bucket_count && out.first_page_cost_ascending < page; ++b) {
             out.first_page_cost_ascending += state.counts[b];
         }
-        for (std::size_t b = out.bucket_count; b-- > 0 && out.first_page_cost_descending < page;) {
-            out.first_page_cost_descending += state.counts[b];
+        for (std::size_t g = 0; g < state.layouts.size() && out.first_page_cost_descending < page; ++g) {
+            for (std::size_t b = state.group_offset[g + 1];
+                 b-- > state.group_offset[g] && out.first_page_cost_descending < page;) {
+                out.first_page_cost_descending += state.counts[b];
+            }
         }
         out.needs_rebalance = is_stale(state);
         return out;
     }
 
     std::vector<std::size_t> estimate_bucket_sizes(std::string_view key, const BucketPlan& plan) const override {
-        const KeyState& state = states_[require_state(key)];
-        return BucketLayout<T>::estimate(state.key, items_, state.keys, plan).expected_sizes();
+        std::vector<std::size_t> sizes;
+        for (const BucketLayout<T>& layout : estimate_layouts(states_[require_state(key)], plan)) {
+            sizes.insert(sizes.end(), layout.expected_sizes().begin(), layout.expected_sizes().end());
+        }
+        return sizes;
     }
 
     bool needs_rebalance(std::string_view key) const override { return is_stale(states_[require_state(key)]); }
@@ -374,7 +401,10 @@ private:
         SortKey<T> key;
         std::vector<std::uint64_t> keys;  ///< normalized key per slot (keyed sort keys only)
         std::vector<BucketId> buckets;    ///< bucket id per slot
-        BucketLayout<T> layout;
+        std::vector<BucketLayout<T>> layouts;   ///< one per group
+        std::vector<std::size_t> group_offset;  ///< first bucket id of each group, plus the total
+        std::vector<std::size_t> expected;      ///< expected size of every bucket (all groups)
+        std::size_t estimated_from = 0;         ///< elements the layouts were estimated from
         std::vector<std::size_t> counts;  ///< elements per bucket
         std::size_t churn = 0;            ///< adds, removals and updates since the layout was made
         std::size_t stale_checked_at = npos;  ///< churn value of the last automatic staleness check
@@ -412,8 +442,59 @@ private:
         return index;
     }
 
-    std::size_t to_ascending(std::size_t position) const {
-        return direction_ == Direction::ascending ? position : items_.size() - 1 - position;
+    static std::size_t bucket_total(const KeyState& state) { return state.group_offset.back(); }
+
+    /// Ascending position of a position in the current order. Descending
+    /// order reverses positions inside each group, so the mapping is its own
+    /// inverse.
+    std::size_t to_ascending(const KeyState& state, std::size_t position) const {
+        if (direction_ == Direction::ascending) {
+            return position;
+        }
+        if (state.layouts.size() == 1) {
+            return items_.size() - 1 - position;
+        }
+        std::size_t lo = 0;
+        std::size_t hi = state.layouts.size();
+        while (lo < hi) {  // last group whose first position is <= position
+            const std::size_t mid = lo + (hi - lo) / 2;
+            if (state.start[state.group_offset[mid]] <= position) {
+                lo = mid + 1;
+            } else {
+                hi = mid;
+            }
+        }
+        const std::size_t g = lo - 1;
+        return state.start[state.group_offset[g]] + (state.start[state.group_offset[g + 1]] - 1 - position);
+    }
+
+    /// Global bucket id of `item`; `item_key` is its normalized key (keyed sort keys).
+    std::size_t bucket_for(const KeyState& state, const T& item, std::uint64_t item_key) const {
+        const std::size_t g = state.layouts.size() > 1 ? state.key.group(item) : 0;
+        const BucketLayout<T>& layout = state.layouts[g];
+        const std::size_t local =
+            state.key.has_key() ? layout.bucket_of(item, item_key, state.key) : layout.bucket_of(item, state.key);
+        return state.group_offset[g] + local;
+    }
+
+    /// One layout per group, each estimated from that group's elements.
+    std::vector<BucketLayout<T>> estimate_layouts(const KeyState& state, const BucketPlan& plan) const {
+        const std::size_t groups = state.key.group_count();
+        std::vector<BucketLayout<T>> layouts;
+        if (groups == 1) {
+            layouts.push_back(BucketLayout<T>::estimate(state.key, items_, state.keys, plan));
+            return layouts;
+        }
+        std::vector<std::vector<std::size_t>> members(groups);
+        for (std::size_t slot = 0; slot < items_.size(); ++slot) {
+            members[state.key.group(items_[slot])].push_back(slot);
+        }
+        // Bucket ids are 16-bit, shared by all groups.
+        const BucketPlan per_group = plan.with_max_buckets(std::min(plan.max_buckets(), BucketPlan::max_bucket_limit / groups));
+        for (const std::vector<std::size_t>& group : members) {
+            layouts.push_back(BucketLayout<T>::estimate(state.key, items_, state.keys, per_group, &group));
+        }
+        return layouts;
     }
 
     static std::size_t bucket_at(const KeyState& state, std::size_t ascending_position) {
@@ -422,12 +503,12 @@ private:
     }
 
     std::size_t skew_floor(const KeyState& state, std::size_t bucket) const {
-        return std::max<std::size_t>({state.layout.expected_sizes()[bucket], plan_.page_size(), 1});
+        return std::max<std::size_t>({state.expected[bucket], plan_.page_size(), 1});
     }
 
     bool is_stale(const KeyState& state) const {
         const std::size_t n = items_.size();
-        if (n > 2 * std::max(state.layout.estimated_from(), plan_.page_size())) {
+        if (n > 2 * std::max(state.estimated_from, plan_.page_size())) {
             return true;
         }
         for (std::size_t b = 0; b < state.counts.size(); ++b) {
@@ -444,7 +525,7 @@ private:
             return;
         }
         state.stale_checked_at = state.churn;
-        if (state.churn >= std::max(plan_.page_size(), state.layout.estimated_from() / 8) && is_stale(state)) {
+        if (state.churn >= std::max(plan_.page_size(), state.estimated_from / 8) && is_stale(state)) {
             relayout(state);
         }
     }
@@ -464,16 +545,23 @@ private:
     }
 
     void relayout(KeyState& state) {
-        state.layout = BucketLayout<T>::estimate(state.key, items_, state.keys, plan_);
-        state.splitter_slots.assign(state.layout.splitter_positions().begin(), state.layout.splitter_positions().end());
+        state.layouts = estimate_layouts(state, plan_);
+        state.group_offset.assign(1, 0);
+        state.expected.clear();
+        state.splitter_slots.clear();
+        for (const BucketLayout<T>& layout : state.layouts) {
+            state.group_offset.push_back(state.group_offset.back() + layout.bucket_count());
+            state.expected.insert(state.expected.end(), layout.expected_sizes().begin(), layout.expected_sizes().end());
+            state.splitter_slots.insert(state.splitter_slots.end(), layout.splitter_positions().begin(),
+                                        layout.splitter_positions().end());
+        }
         std::sort(state.splitter_slots.begin(), state.splitter_slots.end());
         state.splitter_changed = false;
-        state.counts.assign(state.layout.bucket_count(), 0);
+        state.estimated_from = items_.size();
+        state.counts.assign(bucket_total(state), 0);
         state.buckets.resize(items_.size());
         for (std::size_t slot = 0; slot < items_.size(); ++slot) {
-            const std::size_t b = state.key.has_key()
-                                      ? state.layout.bucket_of(items_[slot], state.keys[slot], state.key)
-                                      : state.layout.bucket_of(items_[slot], state.key);
+            const std::size_t b = bucket_for(state, items_[slot], state.key.has_key() ? state.keys[slot] : 0);
             state.buckets[slot] = static_cast<BucketId>(b);
             ++state.counts[b];
         }
@@ -496,14 +584,12 @@ private:
         items_.push_back(std::move(value));
         const T& item = items_.back();
         for (KeyState& state : states_) {
-            std::size_t b = 0;
+            std::uint64_t k = 0;
             if (state.key.has_key()) {
-                const std::uint64_t k = state.key.key(item);
+                k = state.key.key(item);
                 state.keys.push_back(k);
-                b = state.layout.bucket_of(item, k, state.key);
-            } else {
-                b = state.layout.bucket_of(item, state.key);
             }
+            const std::size_t b = bucket_for(state, item, k);
             state.buckets.push_back(static_cast<BucketId>(b));
             ++state.counts[b];
             ++state.churn;
@@ -514,13 +600,10 @@ private:
     }
 
     void rekey(KeyState& state, std::size_t slot) {
-        std::size_t b = 0;
         if (state.key.has_key()) {
             state.keys[slot] = state.key.key(items_[slot]);
-            b = state.layout.bucket_of(items_[slot], state.keys[slot], state.key);
-        } else {
-            b = state.layout.bucket_of(items_[slot], state.key);
         }
+        const std::size_t b = bucket_for(state, items_[slot], state.key.has_key() ? state.keys[slot] : 0);
         --state.counts[state.buckets[slot]];
         state.buckets[slot] = static_cast<BucketId>(b);
         ++state.counts[b];
@@ -537,7 +620,7 @@ private:
     /// Counting sort of all slots by bucket id. Nothing is sorted yet.
     void build_order(KeyState& state) {
         const std::size_t n = items_.size();
-        const std::size_t k = state.layout.bucket_count();
+        const std::size_t k = bucket_total(state);
         state.start.assign(k + 1, 0);
         for (std::size_t b = 0; b < k; ++b) {
             state.start[b + 1] = state.start[b] + state.counts[b];
@@ -561,7 +644,7 @@ private:
     /// Added and updated slots go to the (unsorted) back of their bucket.
     void regroup(KeyState& state) {
         const std::size_t n = items_.size();
-        const std::size_t k = state.layout.bucket_count();
+        const std::size_t k = bucket_total(state);
         std::vector<std::size_t> start(k + 1, 0);
         for (std::size_t b = 0; b < k; ++b) {
             start[b + 1] = start[b] + state.counts[b];
@@ -627,7 +710,7 @@ private:
         if (!state.has_order) {
             return;
         }
-        const std::size_t k = state.layout.bucket_count();
+        const std::size_t k = bucket_total(state);
         std::size_t out = 0;
         std::vector<std::size_t> start(k + 1, 0);
         for (std::size_t b = 0; b < k; ++b) {
@@ -654,6 +737,10 @@ private:
 
     /// Sorts the unsorted tail of a bucket and merges it into the sorted prefix.
     /// Order: key, tie-breaker, insertion order (slot numbers keep insertion order).
+    /// Merge sorts only: user comparators are not always consistent (Dolphin's
+    /// natural compare has cycles for "6.10" / "6.9" / "6.9.1"), and std::sort
+    /// may read out of bounds with such a comparator; stable_sort and
+    /// inplace_merge always terminate inside the range.
     void sort_bucket(KeyState& state, std::size_t bucket) {
         const std::size_t length = state.start[bucket + 1] - state.start[bucket];
         const std::size_t sorted = state.sorted_len[bucket];
@@ -673,7 +760,7 @@ private:
                 const int c = key.tie_break(items_[a], items_[b]);
                 return c != 0 ? c < 0 : a < b;
             };
-            std::sort(middle, last, less);
+            std::stable_sort(middle, last, less);
             std::inplace_merge(first, middle, last, less);
         } else {
             const SortKey<T>& key = state.key;
@@ -681,7 +768,7 @@ private:
                 const int c = key.compare(items_[a], items_[b]);
                 return c != 0 ? c < 0 : a < b;
             };
-            std::sort(middle, last, less);
+            std::stable_sort(middle, last, less);
             std::inplace_merge(first, middle, last, less);
         }
         state.sorted_len[bucket] = length;

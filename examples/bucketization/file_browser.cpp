@@ -113,16 +113,10 @@ int main(int argc, char** argv) {
     index.add_sort_key(bz::SortKey<Entry>::of_comparator(
         "natural", [](const Entry& a, const Entry& b) { return natural_compare(a.name, b.name); }));
     index.add_sort_key(bz::SortKey<Entry>::of("size", &Entry::size));
-    // Folders first, newest first. Descending order reverses everything
-    // (folders would go last), so this is one composite key sorted ascending:
-    // the top bit separates folders, the rest is the reversed timestamp. The
-    // shift drops one bit of the timestamp; the tie-breaker restores it.
-    index.add_sort_key(bz::SortKey<Entry>::of_key(
-        "newest",
-        [](const Entry& e) {
-            return (e.is_dir ? 0 : bz::keys::sign_bit) | (bz::keys::reverse(bz::keys::from_signed(e.modified)) >> 1);
-        },
-        [](const Entry& a, const Entry& b) { return (a.modified < b.modified) - (a.modified > b.modified); }));
+    // Folders stay first in both directions: a group, not part of the key.
+    index.add_sort_key(bz::SortKey<Entry>::of("modified", &Entry::modified).with_groups(2, [](const Entry& e) {
+        return e.is_dir ? std::size_t{0} : std::size_t{1};
+    }));
     index.add_all(entries);  // pre-sorting: every entry picks a bucket per sort key
 
     std::printf("%zu entries in %s\n", index.size(), root.string().c_str());
@@ -131,7 +125,7 @@ int main(int argc, char** argv) {
     print_page(index, rows);
     index.sort_by("size", bz::Direction::descending);
     print_page(index, rows);
-    index.sort_by("newest");
+    index.sort_by("modified", bz::Direction::descending);  // folders first, newest first
     print_page(index, rows);
     index.sort_by("name");
     print_page(index, rows);

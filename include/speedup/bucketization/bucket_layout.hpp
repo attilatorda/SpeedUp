@@ -170,11 +170,14 @@ public:
     /// Estimates a layout for `items` under `key`.
     ///
     /// `keys` holds the normalized key of every item for keyed sort keys and
-    /// is ignored otherwise. Cost: sorting a sample of at most
+    /// is ignored otherwise. With `subset`, only the items at those positions
+    /// are laid out (one group of a grouped sort key); splitter positions
+    /// still refer to `items`. Cost: sorting a sample of at most
     /// `plan.sample_size()` elements.
     static BucketLayout estimate(const SortKey<T>& key, const std::vector<T>& items,
-                                 const std::vector<std::uint64_t>& keys, const BucketPlan& plan) {
-        const std::size_t n = items.size();
+                                 const std::vector<std::uint64_t>& keys, const BucketPlan& plan,
+                                 const std::vector<std::size_t>* subset = nullptr) {
+        const std::size_t n = subset ? subset->size() : items.size();
         BucketLayout layout;
         layout.estimated_from_ = n;
         const std::vector<std::size_t> targets = plan.target_sizes(n);
@@ -183,7 +186,12 @@ public:
             return layout;
         }
 
-        const std::vector<std::size_t> sample = detail::sample_indices(n, plan.sample_size(), plan.seed());
+        std::vector<std::size_t> sample = detail::sample_indices(n, plan.sample_size(), plan.seed());
+        if (subset) {
+            for (std::size_t& index : sample) {
+                index = (*subset)[index];
+            }
+        }
         const std::size_t s = sample.size();
         std::vector<std::size_t> desired;
         std::size_t cumulative = 0;
@@ -201,7 +209,7 @@ public:
             return (keyed ? key.tie_break(items[a], items[b]) : key.compare(items[a], items[b])) < 0;
         };
         std::vector<std::size_t> sorted = sample;
-        std::sort(sorted.begin(), sorted.end(), less);
+        std::stable_sort(sorted.begin(), sorted.end(), less);  // safe even if the comparator has cycles
         std::vector<std::size_t> positions = detail::choose_split_positions(
             desired, s,
             [&](std::size_t q) {

@@ -42,13 +42,38 @@ C++: GCC 13 `-O3` (Release). Java: OpenJDK 21. CSV: `benchmarks/outputs/results_
 
 | n | key | C++ std::sort | C++ switch + page | Java List.sort | Java switch + page |
 |---|-----|---------------|-------------------|----------------|--------------------|
-| 10,000 | name | 2.1 ms | 0.026 ms | 5.9 ms | 0.21 ms |
-| 100,000 | name | 38.5 ms | 0.15 ms | 45.4 ms | 0.44 ms |
-| 1,000,000 | name | 952 ms | 2.0 ms | 847 ms | 3.3 ms |
-| 1,000,000 | size | 400 ms | 2.3 ms | 717 ms | 2.9 ms |
-| 1,000,000 | modified | 395 ms | 1.9 ms | 768 ms | 2.4 ms |
+| 10,000 | name | 1.7 ms | 0.025 ms | 3.5 ms | 0.10 ms |
+| 100,000 | name | 41 ms | 0.18 ms | 55 ms | 0.49 ms |
+| 1,000,000 | name | 1,052 ms | 2.1 ms | 1,034 ms | 3.7 ms |
+| 1,000,000 | size | 416 ms | 1.8 ms | 695 ms | 2.8 ms |
+| 1,000,000 | modified | 448 ms | 2.1 ms | 927 ms | 3.1 ms |
 
-Pre-sorting 1,000,000 elements for all four keys: 137 ms (C++), 184 ms (Java).
+Pre-sorting 1,000,000 elements for all four keys: 135 ms (C++), 226 ms (Java).
+Java numbers vary by about ±20% between runs (JIT).
+
+## Bucketization vs. real file manager stacks
+
+Compares Bucketization with the sorting code file managers actually run, on
+real directory listings (`benchmarks/datasets/`):
+
+- `speedup_benchmark_dolphin_stack`: KDE Dolphin's comparison, parallel merge
+  sort and `resortAllItems()` bookkeeping, extracted from Dolphin, on Qt 6
+  `QCollator`/ICU (needs Qt 6 and ICU development packages)
+- `speedup_benchmark_glib_stack`: GLib collation keys with `g_sequence_sort`
+  (Thunar, Nemo, Caja) and a stable sort standing in for GTK 4's
+  `GtkSortListModel` (Nautilus) (needs GLib development packages and an
+  `en_US.UTF-8` locale)
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+python3 benchmarks/scripts/run_bucketization_benchmarks.py --build build   # add --quick to skip 1M entries
+```
+
+Results: `benchmarks/outputs/bucketization_dolphin_stack.csv`,
+`benchmarks/outputs/bucketization_glib_stack.csv` and the generated tables in
+`benchmarks/outputs/bucketization_file_manager_stacks.md`. Method and
+analysis: `docs/bucketization/benchmarks.md`.
 
 ## Add a new benchmark checklist
 1. Add benchmark source under `benchmarks/core/`.

@@ -158,13 +158,28 @@ public final class BucketLayout<T> {
      *     entries), ignored otherwise
      */
     public static <T> BucketLayout<T> estimate(SortKey<T> key, List<? extends T> items, long[] keys, BucketPlan plan) {
-        final int n = items.size();
+        return estimate(key, items, keys, plan, null);
+    }
+
+    /**
+     * Like {@link #estimate(SortKey, List, long[], BucketPlan)}, but lays out only the items at the
+     * positions in {@code subset} (one group of a grouped sort key). Splitter positions still refer
+     * to {@code items}.
+     */
+    public static <T> BucketLayout<T> estimate(SortKey<T> key, List<? extends T> items, long[] keys, BucketPlan plan,
+                                               int[] subset) {
+        final int n = subset != null ? subset.length : items.size();
         int[] targets = plan.targetSizes(n);
         if (targets.length <= 1) {
             return single(n);
         }
 
         int[] sample = sampleIndices(n, plan.sampleSize(), plan.seed());
+        if (subset != null) {
+            for (int i = 0; i < sample.length; i++) {
+                sample[i] = subset[sample[i]];
+            }
+        }
         final int s = sample.length;
         int[] desired = new int[targets.length - 1];
         long cumulative = 0;
@@ -182,15 +197,7 @@ public final class BucketLayout<T> {
             }
             return key.compare(items.get(a), items.get(b));
         };
-        Integer[] boxed = new Integer[s];
-        for (int i = 0; i < s; i++) {
-            boxed[i] = sample[i];
-        }
-        Arrays.sort(boxed, (a, b) -> compare.applyAsInt(a, b));
-        int[] sorted = new int[s];
-        for (int i = 0; i < s; i++) {
-            sorted[i] = boxed[i];
-        }
+        final int[] sorted = sortSample(sample, compare);
         int[] positions = chooseSplitPositions(desired, s,
                 q -> lowerBound(sorted, sorted[q], compare), q -> upperBound(sorted, sorted[q], compare));
 
@@ -221,6 +228,30 @@ public final class BucketLayout<T> {
         }
         return new BucketLayout<>(boundaries, splitElement, Collections.unmodifiableList(chosen),
                 Arrays.copyOf(chosenPositions, chosen.size()), expected, n);
+    }
+
+    /** The sample indices sorted by {@code compare}, which may be inconsistent. */
+    private static int[] sortSample(int[] sample, IntBinaryOperator compare) {
+        Integer[] boxed = new Integer[sample.length];
+        for (int i = 0; i < sample.length; i++) {
+            boxed[i] = sample[i];
+        }
+        try {
+            Arrays.sort(boxed, (a, b) -> compare.applyAsInt(a, b));
+        } catch (IllegalArgumentException inconsistentComparator) {
+            // TimSort throws when it notices a comparator with cycles, and real ones have them
+            // (Dolphin's natural compare: "6.10" < "6.9" < "6.9.1" < "6.10"). Our merge sort never
+            // throws. It is only the fallback: sharing it with the index's hot bucket sorts would
+            // give their comparator call one more receiver type and slow them down.
+            int[] sorted = sample.clone();
+            SlotSorter.sort(sorted, new int[(sorted.length + 1) / 2], 0, sorted.length, compare::applyAsInt);
+            return sorted;
+        }
+        int[] sorted = new int[sample.length];
+        for (int i = 0; i < sample.length; i++) {
+            sorted[i] = boxed[i];
+        }
+        return sorted;
     }
 
     /**

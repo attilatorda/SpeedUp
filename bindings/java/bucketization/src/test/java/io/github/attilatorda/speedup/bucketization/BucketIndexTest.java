@@ -76,21 +76,31 @@ class BucketIndexTest {
             return c != 0 ? c : a.name.compareTo(b.name);
         }));
         keys.add(SortKey.ofKey("sizeThenScore", r -> Keys.fromSigned(r.size), (a, b) -> Double.compare(a.score, b.score)));
+        // Groups ("folders first" in both directions), keyed and comparator-only.
+        keys.add(SortKey.<Rec>ofString("nameFoldersFirst", r -> r.name).withGroups(2, r -> r.id % 3 == 0 ? 0 : 1));
+        keys.add(SortKey.<Rec>ofComparator("scoreIn3Groups", (a, b) -> Double.compare(a.score, b.score))
+                .withGroups(3, r -> r.id % 3));
         return keys;
     }
 
-    /** Reference order: stable sort of the elements in insertion order. */
+    /**
+     * Reference order: stable sort of the elements in insertion order. Descending reverses the
+     * order inside each group (the whole list when ungrouped).
+     */
     static List<Integer> referenceIds(List<Rec> model, SortKey<Rec> key, Direction direction) {
         List<Rec> sorted = new ArrayList<>(model);
         sorted.sort(key);
-        List<Integer> ids = new ArrayList<>();
-        for (Rec r : sorted) {
-            ids.add(r.id);
-        }
         if (direction == Direction.DESCENDING) {
-            java.util.Collections.reverse(ids);
+            for (int first = 0; first < sorted.size();) {
+                int last = first;
+                while (last < sorted.size() && key.group(sorted.get(last)) == key.group(sorted.get(first))) {
+                    last++;
+                }
+                java.util.Collections.reverse(sorted.subList(first, last));
+                first = last;
+            }
         }
-        return ids;
+        return ids(sorted);
     }
 
     static List<Integer> ids(List<Rec> recs) {
@@ -328,6 +338,94 @@ class BucketIndexTest {
         automatic.sortBy("value", Direction.DESCENDING);
         assertEquals(1_000_000L + 1999, automatic.firstPage().get(0));
         assertFalse(automatic.needsRebalance("value"));
+    }
+
+    /** Folders first in both directions, with one pre-sort per key. */
+    @Test
+    void groupsStayFirstInBothDirections() {
+        record Entry(String name, boolean dir) {
+        }
+        BucketIndex<Entry> index = new BucketIndex<>(BucketPlan.defaults().withPageSize(4));
+        index.addSortKey(SortKey.<Entry>ofString("name", Entry::name).withGroups(2, e -> e.dir() ? 0 : 1));
+        List<Entry> entries = new ArrayList<>();
+        for (int i = 0; i < 300; i++) {
+            entries.add(new Entry("f" + (1000 + i), false));
+            if (i % 10 == 0) {
+                entries.add(new Entry("d" + (1000 + i), true));
+            }
+        }
+        index.addAll(entries);
+        assertEquals(30, index.layout("name", 0).estimatedFrom());
+        assertEquals(300, index.layout("name", 1).estimatedFrom());
+        assertThrows(IndexOutOfBoundsException.class, () -> index.layout("name", 2));
+        index.sortBy("name", Direction.DESCENDING);
+        assertEquals("d1290", index.get(0).name());
+        assertEquals("d1000", index.get(29).name());
+        assertEquals("f1299", index.get(30).name());
+        assertEquals("f1000", index.get(329).name());
+        assertEquals(List.of("d1010", "d1000", "f1299", "f1298"), index.range(28, 32).stream().map(Entry::name).toList());
+        assertTrue(index.stats("name").firstPageCostDescending() < 40);
+        index.sortBy("name", Direction.ASCENDING);
+        assertEquals("d1000", index.get(0).name());
+        assertEquals("f1000", index.get(30).name());
+        assertEquals(31, index.positionIf(e -> e.name().equals("f1001")));
+        index.sortBy("name", Direction.DESCENDING);
+        assertEquals(328, index.positionIf(e -> e.name().equals("f1001")));
+
+        BucketIndex<Entry> bad = new BucketIndex<>();
+        bad.addSortKey(SortKey.<Entry>ofString("g", Entry::name).withGroups(2, e -> 7));
+        assertThrows(IndexOutOfBoundsException.class, () -> bad.add(new Entry("x", false)));
+        assertThrows(IllegalArgumentException.class, () -> SortKey.<Entry>ofString("g", Entry::name).withGroups(0, e -> 0));
+    }
+
+    /**
+     * A comparator with cycles (rock-paper-scissors) must not throw or lose elements. Real
+     * comparators have such bugs: Dolphin's natural compare orders kernel-6.10 &lt; kernel-6.9 &lt;
+     * kernel-6.9.1 &lt; kernel-6.10.
+     */
+    @Test
+    void inconsistentComparatorDoesNotBreakTheIndex() {
+        java.util.Comparator<Rec> rps = (a, b) -> {
+            int x = a.id % 3;
+            int y = b.id % 3;
+            if (x == y) {
+                return Integer.compare(a.id, b.id);
+            }
+            return (x + 1) % 3 == y ? -1 : 1;
+        };
+        // Antisymmetric but otherwise random per pair: makes TimSort throw
+        // "Comparison method violates its general contract", which the layout must survive.
+        java.util.Comparator<Rec> chaos = (a, b) -> {
+            if (a.id == b.id) {
+                return 0;
+            }
+            int lo = Math.min(a.id, b.id);
+            int hi = Math.max(a.id, b.id);
+            long h = (lo * 0x9E3779B97F4A7C15L) ^ (hi * 0xC2B2AE3D27D4EB4FL);
+            h ^= h >>> 29;
+            int sign = (h & 1) == 0 ? -1 : 1;
+            return a.id == lo ? sign : -sign;
+        };
+        BucketIndex<Rec> index = new BucketIndex<>(BucketPlan.defaults().withPageSize(8));
+        index.addSortKey(SortKey.ofComparator("rps", rps));
+        index.addSortKey(SortKey.ofKey("rpsTie", r -> 7L, rps));
+        index.addSortKey(SortKey.ofComparator("chaos", chaos));
+        index.addSortKey(SortKey.ofKey("chaosTie", r -> 7L, chaos));
+        List<Rec> batch = new ArrayList<>();
+        for (int i = 0; i < 5000; i++) {
+            batch.add(new Rec(i, "", 0, 0));
+        }
+        index.addAll(batch);
+        for (String key : List.of("rps", "rpsTie", "chaos", "chaosTie")) {
+            for (Direction direction : Direction.values()) {
+                index.sortBy(key, direction);
+                List<Integer> got = ids(index.asList());
+                got.sort(null);
+                for (int i = 0; i < batch.size(); i++) {
+                    assertEquals(i, got.get(i));
+                }
+            }
+        }
     }
 
     @Test
