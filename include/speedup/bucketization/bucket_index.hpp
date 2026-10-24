@@ -750,26 +750,33 @@ private:
         const auto first = state.order.begin() + static_cast<std::ptrdiff_t>(state.start[bucket]);
         const auto middle = first + static_cast<std::ptrdiff_t>(sorted);
         const auto last = first + static_cast<std::ptrdiff_t>(length);
+        // A tail already in order is left as it is: stable sorting would not move
+        // it. This makes buckets of ties (all times equal, a column without a
+        // tie-breaker) cost one pass; on unsorted data the check stops early.
+        auto finish = [&](const auto& less) {
+            if (!std::is_sorted(middle, last, less)) {
+                std::stable_sort(middle, last, less);
+            }
+            if (middle != first && less(*middle, *(middle - 1))) {
+                std::inplace_merge(first, middle, last, less);
+            }
+        };
         if (state.key.has_key()) {
             const std::vector<std::uint64_t>& keys = state.keys;
             const SortKey<T>& key = state.key;
-            auto less = [&](Slot a, Slot b) {
+            finish([&](Slot a, Slot b) {
                 if (keys[a] != keys[b]) {
                     return keys[a] < keys[b];
                 }
                 const int c = key.tie_break(items_[a], items_[b]);
                 return c != 0 ? c < 0 : a < b;
-            };
-            std::stable_sort(middle, last, less);
-            std::inplace_merge(first, middle, last, less);
+            });
         } else {
             const SortKey<T>& key = state.key;
-            auto less = [&](Slot a, Slot b) {
+            finish([&](Slot a, Slot b) {
                 const int c = key.compare(items_[a], items_[b]);
                 return c != 0 ? c < 0 : a < b;
-            };
-            std::stable_sort(middle, last, less);
-            std::inplace_merge(first, middle, last, less);
+            });
         }
         state.sorted_len[bucket] = length;
     }

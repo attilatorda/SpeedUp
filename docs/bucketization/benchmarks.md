@@ -19,6 +19,8 @@ on Qt 6 and ICU:
 
 - Column switches are **178–3,842× faster** on real folders, and 800–2,700×
   at 1,000,000 entries (names: 8.9 s → 4.3 ms).
+- **Ten more file managers**, measured in their own sort code, are in
+  [cross-project-benchmarks.md](cross-project-benchmarks.md).
 - **GNOME family** (cached GLib collation keys): a full re-sort takes 9–203 ms
   on the same folders; Bucketization takes 0.06–0.27 ms, after a pre-sort of
   1.5–7 ms.
@@ -124,6 +126,11 @@ Real listings unless marked synthetic; details and capture commands in
 - **Correctness:** every Bucketization result is compared with the stack's
   own result, element by element: the first page for every measurement and
   the whole order once per column and direction.
+- These tables were measured at commit `2afceb1`. A full re-run with the
+  current code gave the same results within run-to-run noise: the median
+  ratio per column was 0.96–1.06 for Dolphin and 0.96–0.99 for GLib, and
+  every order matched. The only change since then is that buckets are
+  checked for order before sorting.
 
 ## Results
 
@@ -295,11 +302,12 @@ both test suites.
 | Dolphin keeps folders first in both directions; Bucketization's descending order reversed everything, so each direction needed its own key and pre-sort | **groups** (`SortKey::with_groups`): classes that keep their order in both directions, each with its own layout | one pre-sort per column instead of two; descending first page is page-sized too |
 | The first ICU key (letters before the first digit) gave every `IMG_…` name the same key, so pre-sorting camera folders cost more than comparator mode (81 vs 59 ms on photos-100k) | the key now also covers the **first number, by value** (still provably consistent with Dolphin) | pre-sort 81 → 48 ms on photos-100k (name, ascending) |
 | Real comparators can be cyclic | **merge sorts only** inside buckets (C++ and Java) and for C++ layout samples; Java samples fall back to the merge sort when TimSort rejects the comparator | no undefined behaviour or exceptions; every element always returned |
+| lf has no tie-breaker for size and time, and linux-tree has no timestamps: every file tied, so the first bucket held the whole folder and a switch cost as much as lf's own sort (7.5 vs 7.2 ms, [cross-project](cross-project-benchmarks.md)) | C++ buckets are **checked for order before sorting** (Java's merge sort already skips sorted runs) | a bucket of ties costs one pass; same results, since a stable sort would not move a sorted bucket |
 
 ## Reproducing
 
 ```bash
-sudo apt install qt6-base-dev libicu-dev libglib2.0-dev   # optional stacks
+sudo apt install qt6-base-dev libicu-dev libglib2.0-dev libgtk-4-dev   # optional stacks
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build
 python3 benchmarks/scripts/run_bucketization_benchmarks.py --build build          # all datasets

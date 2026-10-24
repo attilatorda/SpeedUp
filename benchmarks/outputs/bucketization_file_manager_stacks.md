@@ -200,3 +200,582 @@ GtkSortListModel (Nautilus). Bucketization keys are the first 8 bytes of the sam
 | intl-20k | 20,000 | size | desc | 26 | 11 | 3.21 | 0.22 | 0.04 | 0.0001 | 1.04 | yes |
 | intl-20k | 20,000 | modified | asc | 26 | 11 | 2.69 | 0.11 | 0.03 | 0.0002 | 0.62 | yes |
 | intl-20k | 20,000 | modified | desc | 26 | 11 | 2.87 | 0.12 | 0.03 | 0.0002 | 0.71 | yes |
+
+### All projects at a glance
+
+Real listings with 36,000–98,000 entries plus the 100,000-photo camera roll; ranges over
+name, size and modified, ascending and descending. Re-sort = the project's own code path
+for a column click; switch = Bucketization's `sort_by` + first page (64 rows), grouping not
+cached. Pre-sort is paid once per column (both directions).
+
+| project | re-sort (ms) | Bucketization switch (ms) | speed-up | pre-sort, once (ms) | valid orders |
+|---|---:|---:|---:|---:|---:|
+| Thunar | 38–333 | 0.047–0.30 | 218–1,552× | 2.8–10 | 42/42 |
+| Nemo | 36–382 | 0.057–0.22 | 380–2,206× | 2.6–11 | 42/42 |
+| Caja | 45–389 | 0.048–0.24 | 312–1,953× | 2.5–10 | 42/42 |
+| Nautilus | 63–480 | 0.052–0.26 | 729–2,921× | 2.6–12 | 42/42 |
+| PCManFM-Qt | 48–1,499 | 0.092–2.0 | 322–7,640× | 2.6–206 | 42/42 |
+| KIO dialogs | 84–1,384 | 0.079–1.2 | 356–6,647× | 2.0–159 | 42/42 |
+| Krusader | 115–801 | 0.056–0.54 | 587–4,207× | 1.9–68 | 42/42 |
+| nnn | 7.7–290 | 0.072–0.28 | 72–1,379× | 1.9–106 | 42/42 |
+| yazi (native Rust) | 6.3–63 | 0.060–0.33 | 37–425× | 1.5–12 | 42/42 |
+| lf (native Go) | 8.0–3,050 | 0.057–1.0 | 8–12,108× | 1.3–184 | 42/42 |
+
+### GNOME family: Thunar, Nemo, Caja, Nautilus
+
+Thunar, Nemo and Caja: their list models' `g_sequence_sort()` with their own comparisons and the
+`new_order` bookkeeping for rows-reordered (the view's handling of that signal is not included).
+Nautilus: GTK 4 `GtkSortListModel` over `GtkTreeListModel`, sorted by a `GtkTreeListRowSorter`
+around a `GtkMultiSorter` (folders first, then the column), as in nautilus-view-model.c.
+
+| project | dataset | entries | column | order | project's re-sort | partial_sort | Bucketization switch | cached | pre-sort (once) | speed-up | valid order |
+|---|---|---:|---|---|---:|---:|---:|---:|---:|---:|:---:|
+| Caja | usr-bin | 1,172 | name | asc | 0.57 | 0.03 | 0.0031 | 0.0001 | 0.09 | 184× | yes |
+| Caja | usr-bin | 1,172 | name | desc | 0.59 | 0.04 | 0.0037 | 0.0004 | 0.09 | 159× | yes |
+| Caja | usr-bin | 1,172 | size | asc | 0.50 | 0.02 | 0.0035 | 0.0001 | 0.10 | 142× | yes |
+| Caja | usr-bin | 1,172 | size | desc | 0.50 | 0.03 | 0.0050 | 0.0004 | 0.10 | 101× | yes |
+| Caja | usr-bin | 1,172 | modified | asc | 0.48 | 0.02 | 0.0043 | 0.0001 | 0.11 | 112× | yes |
+| Caja | usr-bin | 1,172 | modified | desc | 0.49 | 0.04 | 0.0062 | 0.0004 | 0.11 | 80× | yes |
+| Caja | usr-lib | 1,533 | name | asc | 0.95 | 0.03 | 0.01 | 0.0001 | 0.22 | 92× | yes |
+| Caja | usr-lib | 1,533 | name | desc | 0.90 | 0.03 | 0.01 | 0.0006 | 0.21 | 81× | yes |
+| Caja | usr-lib | 1,533 | size | asc | 0.73 | 0.02 | 0.01 | 0.0001 | 0.16 | 69× | yes |
+| Caja | usr-lib | 1,533 | size | desc | 0.72 | 0.02 | 0.01 | 0.0006 | 0.18 | 63× | yes |
+| Caja | usr-lib | 1,533 | modified | asc | 0.81 | 0.02 | 0.0097 | 0.0001 | 0.18 | 83× | yes |
+| Caja | usr-lib | 1,533 | modified | desc | 0.66 | 0.03 | 0.0091 | 0.0005 | 0.17 | 73× | yes |
+| Caja | node-modules-top | 395 | name | asc | 0.12 | 0.0089 | 0.0018 | 0.0001 | 0.04 | 66× | yes |
+| Caja | node-modules-top | 395 | name | desc | 0.11 | 0.04 | 0.0029 | 0.0005 | 0.05 | 38× | yes |
+| Caja | node-modules-top | 395 | size | asc | 0.17 | 0.02 | 0.0070 | 0.0001 | 0.10 | 24× | yes |
+| Caja | node-modules-top | 395 | size | desc | 0.16 | 0.02 | 0.0085 | 0.0005 | 0.08 | 19× | yes |
+| Caja | node-modules-top | 395 | modified | asc | 0.34 | 0.02 | 0.0076 | 0.0001 | 0.08 | 44× | yes |
+| Caja | node-modules-top | 395 | modified | desc | 0.14 | 0.03 | 0.0068 | 0.0005 | 0.07 | 21× | yes |
+| Caja | node-modules-tree | 36,069 | name | asc | 59 | 0.37 | 0.05 | 0.0001 | 3.09 | 1,243× | yes² |
+| Caja | node-modules-tree | 36,069 | name | desc | 63 | 1.31 | 0.10 | 0.0007 | 4.27 | 618× | yes² |
+| Caja | node-modules-tree | 36,069 | size | asc | 51 | 0.64 | 0.05 | 0.0001 | 2.55 | 942× | yes² |
+| Caja | node-modules-tree | 36,069 | size | desc | 48 | 1.14 | 0.15 | 0.0010 | 4.15 | 312× | yes² |
+| Caja | node-modules-tree | 36,069 | modified | asc | 54 | 1.24 | 0.14 | 0.0003 | 7.04 | 382× | yes |
+| Caja | node-modules-tree | 36,069 | modified | desc | 45 | 0.62 | 0.10 | 0.0008 | 5.84 | 437× | yes² |
+| Caja | usr-tree | 97,974 | name | asc | 218 | 1.16 | 0.14 | 0.0001 | 8.21 | 1,591× | yes² |
+| Caja | usr-tree | 97,974 | name | desc | 226 | 2.71 | 0.15 | 0.0006 | 7.66 | 1,542× | yes² |
+| Caja | usr-tree | 97,974 | size | asc | 177 | 1.35 | 0.14 | 0.0002 | 6.83 | 1,233× | yes² |
+| Caja | usr-tree | 97,974 | size | desc | 160 | 1.60 | 0.15 | 0.0008 | 6.15 | 1,064× | yes² |
+| Caja | usr-tree | 97,974 | modified | asc | 120 | 1.49 | 0.23 | 0.0002 | 8.16 | 518× | yes |
+| Caja | usr-tree | 97,974 | modified | desc | 101 | 1.47 | 0.23 | 0.0008 | 7.40 | 448× | yes² |
+| Caja | linux-tree | 97,005 | name | asc | 308 | 19 | 0.19 | 0.0001 | 7.22 | 1,624× | yes² |
+| Caja | linux-tree | 97,005 | name | desc | 282 | 3.28 | 0.20 | 0.0005 | 7.59 | 1,426× | yes² |
+| Caja | linux-tree | 97,005 | size | asc | 193 | 1.73 | 0.13 | 0.0002 | 4.70 | 1,486× | yes |
+| Caja | linux-tree | 97,005 | size | desc | 200 | 1.41 | 0.10 | 0.0004 | 4.32 | 1,953× | yes² |
+| Caja | linux-tree | 97,005 | modified | asc | 78 | 4.49 | 0.17 | 0.0002 | 10 | 455× | yes |
+| Caja | linux-tree | 97,005 | modified | desc | 79 | 35 | 0.24 | 0.0005 | 10 | 330× | yes² |
+| Caja | photos-100k | 100,000 | name | asc | 343 | 5.76 | 0.20 | 0.0001 | 10 | 1,724× | yes |
+| Caja | photos-100k | 100,000 | name | desc | 389 | 5.65 | 0.21 | 0.0005 | 10 | 1,885× | yes |
+| Caja | photos-100k | 100,000 | size | asc | 181 | 0.76 | 0.13 | 0.0001 | 3.81 | 1,385× | yes |
+| Caja | photos-100k | 100,000 | size | desc | 168 | 0.78 | 0.12 | 0.0004 | 3.95 | 1,431× | yes |
+| Caja | photos-100k | 100,000 | modified | asc | 93 | 2.69 | 0.10 | 0.0002 | 4.57 | 945× | yes |
+| Caja | photos-100k | 100,000 | modified | desc | 65 | 2.95 | 0.10 | 0.0005 | 2.71 | 677× | yes |
+| Nautilus | usr-bin | 1,172 | name | asc | 1.08 | 0.03 | 0.0039 | 0.0001 | 0.08 | 276× | yes |
+| Nautilus | usr-bin | 1,172 | name | desc | 1.07 | 0.03 | 0.0036 | 0.0004 | 0.08 | 296× | yes |
+| Nautilus | usr-bin | 1,172 | size | asc | 0.95 | 0.02 | 0.0035 | 0.0001 | 0.12 | 271× | yes |
+| Nautilus | usr-bin | 1,172 | size | desc | 1.07 | 0.03 | 0.0048 | 0.0004 | 0.11 | 222× | yes |
+| Nautilus | usr-bin | 1,172 | modified | asc | 0.94 | 0.03 | 0.0052 | 0.0002 | 0.12 | 181× | yes |
+| Nautilus | usr-bin | 1,172 | modified | desc | 1.08 | 0.04 | 0.0081 | 0.0007 | 0.15 | 133× | yes |
+| Nautilus | usr-lib | 1,533 | name | asc | 1.40 | 0.03 | 0.0087 | 0.0001 | 0.19 | 161× | yes |
+| Nautilus | usr-lib | 1,533 | name | desc | 1.43 | 0.03 | 0.01 | 0.0008 | 0.19 | 133× | yes |
+| Nautilus | usr-lib | 1,533 | size | asc | 1.43 | 0.01 | 0.01 | 0.0001 | 0.16 | 141× | yes |
+| Nautilus | usr-lib | 1,533 | size | desc | 1.47 | 0.02 | 0.01 | 0.0005 | 0.17 | 147× | yes |
+| Nautilus | usr-lib | 1,533 | modified | asc | 1.46 | 0.02 | 0.0096 | 0.0001 | 0.15 | 152× | yes |
+| Nautilus | usr-lib | 1,533 | modified | desc | 1.27 | 0.03 | 0.0082 | 0.0005 | 0.15 | 154× | yes |
+| Nautilus | node-modules-top | 395 | name | asc | 0.28 | 0.0088 | 0.0021 | 0.0001 | 0.04 | 134× | yes |
+| Nautilus | node-modules-top | 395 | name | desc | 0.30 | 0.04 | 0.0023 | 0.0006 | 0.03 | 131× | yes |
+| Nautilus | node-modules-top | 395 | size | asc | 0.28 | 0.01 | 0.0064 | 0.0002 | 0.08 | 44× | yes |
+| Nautilus | node-modules-top | 395 | size | desc | 0.31 | 0.03 | 0.01 | 0.0006 | 0.08 | 29× | yes |
+| Nautilus | node-modules-top | 395 | modified | asc | 0.53 | 0.02 | 0.0074 | 0.0001 | 0.09 | 71× | yes |
+| Nautilus | node-modules-top | 395 | modified | desc | 0.51 | 0.04 | 0.0077 | 0.0008 | 0.09 | 66× | yes |
+| Nautilus | node-modules-tree | 36,069 | name | asc | 125 | 0.43 | 0.05 | 0.0002 | 3.91 | 2,403× | yes |
+| Nautilus | node-modules-tree | 36,069 | name | desc | 134 | 1.10 | 0.08 | 0.0007 | 3.69 | 1,713× | yes² |
+| Nautilus | node-modules-tree | 36,069 | size | asc | 92 | 0.48 | 0.06 | 0.0001 | 3.27 | 1,469× | yes |
+| Nautilus | node-modules-tree | 36,069 | size | desc | 102 | 0.37 | 0.08 | 0.0006 | 2.59 | 1,257× | yes² |
+| Nautilus | node-modules-tree | 36,069 | modified | asc | 63 | 0.27 | 0.06 | 0.0001 | 3.30 | 1,022× | yes |
+| Nautilus | node-modules-tree | 36,069 | modified | desc | 69 | 0.55 | 0.10 | 0.0006 | 5.38 | 729× | yes² |
+| Nautilus | usr-tree | 97,974 | name | asc | 404 | 1.20 | 0.20 | 0.0002 | 11 | 2,001× | yes |
+| Nautilus | usr-tree | 97,974 | name | desc | 416 | 2.82 | 0.16 | 0.0007 | 9.03 | 2,620× | yes² |
+| Nautilus | usr-tree | 97,974 | size | asc | 235 | 1.04 | 0.13 | 0.0001 | 5.37 | 1,828× | yes |
+| Nautilus | usr-tree | 97,974 | size | desc | 241 | 1.32 | 0.16 | 0.0007 | 6.68 | 1,474× | yes² |
+| Nautilus | usr-tree | 97,974 | modified | asc | 172 | 0.80 | 0.18 | 0.0001 | 6.31 | 975× | yes |
+| Nautilus | usr-tree | 97,974 | modified | desc | 168 | 0.90 | 0.20 | 0.0007 | 6.87 | 831× | yes² |
+| Nautilus | linux-tree | 97,005 | name | asc | 464 | 4.22 | 0.16 | 0.0002 | 6.37 | 2,921× | yes |
+| Nautilus | linux-tree | 97,005 | name | desc | 438 | 2.91 | 0.26 | 0.0006 | 7.66 | 1,708× | yes² |
+| Nautilus | linux-tree | 97,005 | size | asc | 241 | 1.59 | 0.12 | 0.0001 | 4.64 | 1,990× | yes |
+| Nautilus | linux-tree | 97,005 | size | desc | 254 | 1.25 | 0.12 | 0.0005 | 4.91 | 2,083× | yes² |
+| Nautilus | linux-tree | 97,005 | modified | asc | 139 | 3.58 | 0.17 | 0.0002 | 8.40 | 829× | yes |
+| Nautilus | linux-tree | 97,005 | modified | desc | 144 | 31 | 0.19 | 0.0004 | 9.10 | 760× | yes² |
+| Nautilus | photos-100k | 100,000 | name | asc | 402 | 8.35 | 0.19 | 0.0002 | 12 | 2,134× | yes |
+| Nautilus | photos-100k | 100,000 | name | desc | 480 | 6.14 | 0.17 | 0.0005 | 9.04 | 2,835× | yes |
+| Nautilus | photos-100k | 100,000 | size | asc | 210 | 0.82 | 0.13 | 0.0002 | 4.44 | 1,633× | yes |
+| Nautilus | photos-100k | 100,000 | size | desc | 199 | 0.90 | 0.14 | 0.0006 | 4.93 | 1,471× | yes |
+| Nautilus | photos-100k | 100,000 | modified | asc | 106 | 1.64 | 0.09 | 0.0001 | 2.99 | 1,179× | yes |
+| Nautilus | photos-100k | 100,000 | modified | desc | 108 | 2.52 | 0.10 | 0.0006 | 3.06 | 1,073× | yes |
+| Nemo | usr-bin | 1,172 | name | asc | 0.57 | 0.03 | 0.0028 | 0.0001 | 0.09 | 204× | yes |
+| Nemo | usr-bin | 1,172 | name | desc | 0.62 | 0.04 | 0.0036 | 0.0004 | 0.10 | 173× | yes |
+| Nemo | usr-bin | 1,172 | size | asc | 0.52 | 0.02 | 0.0035 | 0.0001 | 0.12 | 147× | yes |
+| Nemo | usr-bin | 1,172 | size | desc | 0.48 | 0.04 | 0.0048 | 0.0004 | 0.11 | 101× | yes |
+| Nemo | usr-bin | 1,172 | modified | asc | 0.49 | 0.03 | 0.0045 | 0.0001 | 0.11 | 110× | yes |
+| Nemo | usr-bin | 1,172 | modified | desc | 0.52 | 0.04 | 0.0059 | 0.0004 | 0.12 | 88× | yes |
+| Nemo | usr-lib | 1,533 | name | asc | 0.91 | 0.03 | 0.01 | 0.0002 | 0.22 | 84× | yes |
+| Nemo | usr-lib | 1,533 | name | desc | 0.92 | 0.04 | 0.01 | 0.0006 | 0.23 | 86× | yes |
+| Nemo | usr-lib | 1,533 | size | asc | 0.76 | 0.02 | 0.01 | 0.0002 | 0.15 | 76× | yes |
+| Nemo | usr-lib | 1,533 | size | desc | 0.76 | 0.02 | 0.01 | 0.0006 | 0.14 | 61× | yes |
+| Nemo | usr-lib | 1,533 | modified | asc | 0.79 | 0.03 | 0.01 | 0.0002 | 0.21 | 63× | yes |
+| Nemo | usr-lib | 1,533 | modified | desc | 0.68 | 0.04 | 0.0089 | 0.0005 | 0.17 | 76× | yes |
+| Nemo | node-modules-top | 395 | name | asc | 0.11 | 0.0067 | 0.0024 | 0.0001 | 0.04 | 48× | yes |
+| Nemo | node-modules-top | 395 | name | desc | 0.12 | 0.04 | 0.0026 | 0.0005 | 0.03 | 46× | yes |
+| Nemo | node-modules-top | 395 | size | asc | 0.18 | 0.02 | 0.0083 | 0.0001 | 0.09 | 21× | yes |
+| Nemo | node-modules-top | 395 | size | desc | 0.16 | 0.02 | 0.01 | 0.0005 | 0.09 | 16× | yes |
+| Nemo | node-modules-top | 395 | modified | asc | 0.15 | 0.02 | 0.0094 | 0.0002 | 0.07 | 16× | yes |
+| Nemo | node-modules-top | 395 | modified | desc | 0.16 | 0.03 | 0.0067 | 0.0006 | 0.07 | 24× | yes |
+| Nemo | node-modules-tree | 36,069 | name | asc | 68 | 0.60 | 0.06 | 0.0002 | 3.81 | 1,183× | yes² |
+| Nemo | node-modules-tree | 36,069 | name | desc | 58 | 1.36 | 0.07 | 0.0006 | 3.88 | 867× | yes² |
+| Nemo | node-modules-tree | 36,069 | size | asc | 45 | 0.54 | 0.06 | 0.0002 | 2.71 | 762× | yes² |
+| Nemo | node-modules-tree | 36,069 | size | desc | 46 | 0.77 | 0.10 | 0.0007 | 3.15 | 466× | yes² |
+| Nemo | node-modules-tree | 36,069 | modified | asc | 36 | 0.78 | 0.08 | 0.0002 | 4.16 | 427× | yes |
+| Nemo | node-modules-tree | 36,069 | modified | desc | 46 | 1.47 | 0.11 | 0.0010 | 6.06 | 428× | yes² |
+| Nemo | usr-tree | 97,974 | name | asc | 236 | 1.61 | 0.17 | 0.0001 | 9.84 | 1,425× | yes² |
+| Nemo | usr-tree | 97,974 | name | desc | 235 | 3.81 | 0.16 | 0.0007 | 9.69 | 1,458× | yes² |
+| Nemo | usr-tree | 97,974 | size | asc | 204 | 1.64 | 0.15 | 0.0002 | 7.04 | 1,396× | yes² |
+| Nemo | usr-tree | 97,974 | size | desc | 169 | 1.95 | 0.15 | 0.0007 | 6.63 | 1,118× | yes² |
+| Nemo | usr-tree | 97,974 | modified | asc | 122 | 1.92 | 0.21 | 0.0002 | 7.76 | 577× | yes |
+| Nemo | usr-tree | 97,974 | modified | desc | 92 | 2.04 | 0.22 | 0.0007 | 7.42 | 409× | yes² |
+| Nemo | linux-tree | 97,005 | name | asc | 300 | 6.06 | 0.19 | 0.0001 | 6.55 | 1,566× | yes² |
+| Nemo | linux-tree | 97,005 | name | desc | 295 | 3.05 | 0.20 | 0.0005 | 5.78 | 1,465× | yes² |
+| Nemo | linux-tree | 97,005 | size | asc | 178 | 1.71 | 0.12 | 0.0001 | 3.83 | 1,492× | yes |
+| Nemo | linux-tree | 97,005 | size | desc | 204 | 1.88 | 0.12 | 0.0005 | 4.62 | 1,731× | yes² |
+| Nemo | linux-tree | 97,005 | modified | asc | 74 | 6.24 | 0.18 | 0.0001 | 11 | 410× | yes |
+| Nemo | linux-tree | 97,005 | modified | desc | 78 | 40 | 0.20 | 0.0005 | 11 | 380× | yes² |
+| Nemo | photos-100k | 100,000 | name | asc | 361 | 6.91 | 0.19 | 0.0002 | 10 | 1,895× | yes |
+| Nemo | photos-100k | 100,000 | name | desc | 382 | 9.07 | 0.17 | 0.0004 | 8.91 | 2,206× | yes |
+| Nemo | photos-100k | 100,000 | size | asc | 238 | 0.87 | 0.11 | 0.0001 | 4.03 | 2,080× | yes |
+| Nemo | photos-100k | 100,000 | size | desc | 190 | 1.16 | 0.14 | 0.0006 | 4.78 | 1,410× | yes |
+| Nemo | photos-100k | 100,000 | modified | asc | 67 | 1.87 | 0.08 | 0.0001 | 2.59 | 830× | yes |
+| Nemo | photos-100k | 100,000 | modified | desc | 67 | 4.14 | 0.11 | 0.0005 | 3.55 | 599× | yes |
+| Thunar | usr-bin | 1,172 | name | asc | 0.53 | 0.04 | 0.0033 | 0.0001 | 0.08 | 162× | yes |
+| Thunar | usr-bin | 1,172 | name | desc | 0.51 | 0.04 | 0.0045 | 0.0004 | 0.09 | 112× | yes |
+| Thunar | usr-bin | 1,172 | size | asc | 0.41 | 0.01 | 0.0040 | 0.0001 | 0.12 | 103× | yes |
+| Thunar | usr-bin | 1,172 | size | desc | 0.41 | 0.03 | 0.0047 | 0.0004 | 0.11 | 87× | yes |
+| Thunar | usr-bin | 1,172 | modified | asc | 0.42 | 0.02 | 0.0043 | 0.0001 | 0.10 | 97× | yes |
+| Thunar | usr-bin | 1,172 | modified | desc | 0.44 | 0.03 | 0.0044 | 0.0004 | 0.11 | 101× | yes |
+| Thunar | usr-lib | 1,533 | name | asc | 0.83 | 0.02 | 0.01 | 0.0001 | 0.20 | 80× | yes |
+| Thunar | usr-lib | 1,533 | name | desc | 0.78 | 0.03 | 0.01 | 0.0006 | 0.20 | 75× | yes |
+| Thunar | usr-lib | 1,533 | size | asc | 0.60 | 0.02 | 0.01 | 0.0001 | 0.15 | 59× | yes |
+| Thunar | usr-lib | 1,533 | size | desc | 0.62 | 0.01 | 0.0099 | 0.0006 | 0.15 | 62× | yes |
+| Thunar | usr-lib | 1,533 | modified | asc | 0.60 | 0.02 | 0.0099 | 0.0001 | 0.18 | 61× | yes |
+| Thunar | usr-lib | 1,533 | modified | desc | 0.65 | 0.02 | 0.0076 | 0.0005 | 0.17 | 85× | yes |
+| Thunar | node-modules-top | 395 | name | asc | 0.10 | 0.0070 | 0.0033 | 0.0002 | 0.03 | 31× | yes |
+| Thunar | node-modules-top | 395 | name | desc | 0.08 | 0.04 | 0.0025 | 0.0005 | 0.03 | 34× | yes |
+| Thunar | node-modules-top | 395 | size | asc | 0.14 | 0.01 | 0.0063 | 0.0002 | 0.08 | 23× | yes |
+| Thunar | node-modules-top | 395 | size | desc | 0.15 | 0.02 | 0.0088 | 0.0006 | 0.09 | 17× | yes |
+| Thunar | node-modules-top | 395 | modified | asc | 0.13 | 0.01 | 0.0050 | 0.0001 | 0.06 | 25× | yes |
+| Thunar | node-modules-top | 395 | modified | desc | 0.13 | 0.03 | 0.0052 | 0.0007 | 0.07 | 26× | yes |
+| Thunar | node-modules-tree | 36,069 | name | asc | 58 | 0.32 | 0.10 | 0.0002 | 3.86 | 589× | yes² |
+| Thunar | node-modules-tree | 36,069 | name | desc | 48 | 0.95 | 0.05 | 0.0005 | 3.40 | 1,020× | yes² |
+| Thunar | node-modules-tree | 36,069 | size | asc | 50 | 0.40 | 0.10 | 0.0002 | 2.97 | 472× | yes² |
+| Thunar | node-modules-tree | 36,069 | size | desc | 41 | 0.52 | 0.07 | 0.0007 | 2.92 | 627× | yes² |
+| Thunar | node-modules-tree | 36,069 | modified | asc | 38 | 0.61 | 0.14 | 0.0002 | 4.94 | 280× | yes |
+| Thunar | node-modules-tree | 36,069 | modified | desc | 47 | 0.62 | 0.12 | 0.0010 | 5.88 | 386× | yes² |
+| Thunar | usr-tree | 97,974 | name | asc | 222 | 0.96 | 0.14 | 0.0002 | 8.32 | 1,552× | yes² |
+| Thunar | usr-tree | 97,974 | name | desc | 215 | 2.85 | 0.17 | 0.0007 | 9.97 | 1,299× | yes² |
+| Thunar | usr-tree | 97,974 | size | asc | 177 | 1.50 | 0.18 | 0.0002 | 7.57 | 998× | yes² |
+| Thunar | usr-tree | 97,974 | size | desc | 155 | 1.78 | 0.18 | 0.0007 | 5.97 | 859× | yes² |
+| Thunar | usr-tree | 97,974 | modified | asc | 118 | 0.80 | 0.23 | 0.0001 | 10 | 514× | yes |
+| Thunar | usr-tree | 97,974 | modified | desc | 87 | 0.72 | 0.21 | 0.0006 | 6.13 | 411× | yes² |
+| Thunar | linux-tree | 97,005 | name | asc | 274 | 4.73 | 0.30 | 0.0001 | 8.47 | 898× | yes² |
+| Thunar | linux-tree | 97,005 | name | desc | 290 | 4.23 | 0.19 | 0.0005 | 6.83 | 1,526× | yes² |
+| Thunar | linux-tree | 97,005 | size | asc | 168 | 0.95 | 0.13 | 0.0001 | 4.07 | 1,299× | yes |
+| Thunar | linux-tree | 97,005 | size | desc | 201 | 1.11 | 0.14 | 0.0005 | 4.73 | 1,483× | yes² |
+| Thunar | linux-tree | 97,005 | modified | asc | 60 | 3.82 | 0.27 | 0.0001 | 10 | 218× | yes |
+| Thunar | linux-tree | 97,005 | modified | desc | 68 | 30 | 0.20 | 0.0005 | 10 | 341× | yes² |
+| Thunar | photos-100k | 100,000 | name | asc | 333 | 13 | 0.23 | 0.0002 | 9.20 | 1,467× | yes |
+| Thunar | photos-100k | 100,000 | name | desc | 296 | 3.91 | 0.20 | 0.0005 | 9.22 | 1,509× | yes |
+| Thunar | photos-100k | 100,000 | size | asc | 192 | 0.78 | 0.14 | 0.0001 | 4.72 | 1,408× | yes |
+| Thunar | photos-100k | 100,000 | size | desc | 154 | 0.94 | 0.15 | 0.0005 | 4.53 | 1,055× | yes |
+| Thunar | photos-100k | 100,000 | modified | asc | 48 | 1.02 | 0.08 | 0.0002 | 2.96 | 606× | yes |
+| Thunar | photos-100k | 100,000 | modified | desc | 53 | 1.74 | 0.09 | 0.0005 | 2.80 | 572× | yes |
+
+### Qt family: PCManFM-Qt, KDE file dialogs, Krusader
+
+PCManFM-Qt and the KDE file dialogs (KIO's `KDirSortFilterProxyModel`): `QSortFilterProxyModel::sort()`
+with the project's `lessThan()`. Krusader: `ListModel::sort()` (KrSort::Sorter's `std::stable_sort`,
+then the item list and three lookup hashes are rebuilt).
+
+| project | dataset | entries | column | order | project's re-sort | partial_sort | Bucketization switch | cached | pre-sort (once) | speed-up | valid order |
+|---|---|---:|---|---|---:|---:|---:|---:|---:|---:|:---:|
+| KIO dialogs | usr-bin | 1,172 | name | asc | 0.95 | 0.35 | 0.0034 | 0.0002 | 0.30 | 279× | yes |
+| KIO dialogs | usr-bin | 1,172 | name | desc | 1.01 | 0.35 | 0.01 | 0.0004 | 0.30 | 70× | yes |
+| KIO dialogs | usr-bin | 1,172 | size | asc | 0.53 | 0.16 | 0.01 | 0.0002 | 0.29 | 52× | yes |
+| KIO dialogs | usr-bin | 1,172 | size | desc | 0.54 | 0.25 | 0.02 | 0.0003 | 0.31 | 30× | yes |
+| KIO dialogs | usr-bin | 1,172 | modified | asc | 0.65 | 0.22 | 0.02 | 0.0002 | 0.67 | 28× | yes |
+| KIO dialogs | usr-bin | 1,172 | modified | desc | 0.66 | 0.28 | 0.03 | 0.0004 | 0.73 | 21× | yes |
+| KIO dialogs | usr-lib | 1,533 | name | asc | 1.14 | 0.39 | 0.04 | 0.0002 | 0.60 | 27× | yes |
+| KIO dialogs | usr-lib | 1,533 | name | desc | 1.14 | 0.32 | 0.01 | 0.0004 | 0.59 | 82× | yes |
+| KIO dialogs | usr-lib | 1,533 | size | asc | 0.94 | 0.32 | 0.05 | 0.0002 | 0.55 | 20× | yes |
+| KIO dialogs | usr-lib | 1,533 | size | desc | 0.71 | 0.20 | 0.05 | 0.0004 | 0.36 | 15× | yes |
+| KIO dialogs | usr-lib | 1,533 | modified | asc | 0.76 | 0.22 | 0.03 | 0.0003 | 0.77 | 28× | yes |
+| KIO dialogs | usr-lib | 1,533 | modified | desc | 0.74 | 0.31 | 0.03 | 0.0004 | 0.72 | 25× | yes |
+| KIO dialogs | node-modules-top | 395 | name | asc | 0.15 | 0.10 | 0.0049 | 0.0002 | 0.09 | 30× | yes |
+| KIO dialogs | node-modules-top | 395 | name | desc | 0.14 | 0.31 | 0.0055 | 0.0004 | 0.09 | 26× | yes |
+| KIO dialogs | node-modules-top | 395 | size | asc | 0.30 | 0.20 | 0.05 | 0.0001 | 0.57 | 6× | yes |
+| KIO dialogs | node-modules-top | 395 | size | desc | 0.28 | 0.21 | 0.05 | 0.0004 | 0.57 | 6× | yes |
+| KIO dialogs | node-modules-top | 395 | modified | asc | 0.15 | 0.11 | 0.02 | 0.0001 | 0.07 | 9× | yes |
+| KIO dialogs | node-modules-top | 395 | modified | desc | 0.16 | 0.12 | 0.0042 | 0.0004 | 0.08 | 38× | yes |
+| KIO dialogs | node-modules-tree | 36,069 | name | asc | 205 | 6.27 | 0.27 | 0.0002 | 13 | 750× | yes |
+| KIO dialogs | node-modules-tree | 36,069 | name | desc | 238 | 21 | 0.22 | 0.0006 | 15 | 1,084× | yes |
+| KIO dialogs | node-modules-tree | 36,069 | size | asc | 84 | 6.80 | 0.23 | 0.0002 | 8.41 | 356× | yes² |
+| KIO dialogs | node-modules-tree | 36,069 | size | desc | 88 | 9.03 | 0.13 | 0.0006 | 8.70 | 691× | yes² |
+| KIO dialogs | node-modules-tree | 36,069 | modified | asc | 100 | 5.79 | 0.08 | 0.0001 | 2.12 | 1,233× | yes² |
+| KIO dialogs | node-modules-tree | 36,069 | modified | desc | 93 | 6.18 | 0.09 | 0.0006 | 2.42 | 1,030× | yes² |
+| KIO dialogs | usr-tree | 97,974 | name | asc | 848 | 43 | 0.73 | 0.0002 | 42 | 1,160× | yes |
+| KIO dialogs | usr-tree | 97,974 | name | desc | 858 | 67 | 0.23 | 0.0005 | 30 | 3,700× | yes |
+| KIO dialogs | usr-tree | 97,974 | size | asc | 319 | 31 | 0.71 | 0.0002 | 17 | 449× | yes² |
+| KIO dialogs | usr-tree | 97,974 | size | desc | 302 | 31 | 0.26 | 0.0006 | 17 | 1,163× | yes² |
+| KIO dialogs | usr-tree | 97,974 | modified | asc | 525 | 35 | 0.30 | 0.0002 | 29 | 1,778× | yes² |
+| KIO dialogs | usr-tree | 97,974 | modified | desc | 504 | 31 | 0.38 | 0.0006 | 35 | 1,316× | yes² |
+| KIO dialogs | linux-tree | 97,005 | name | asc | 999 | 67 | 1.17 | 0.0003 | 24 | 854× | yes |
+| KIO dialogs | linux-tree | 97,005 | name | desc | 967 | 71 | 0.32 | 0.0007 | 27 | 2,991× | yes |
+| KIO dialogs | linux-tree | 97,005 | size | asc | 270 | 30 | 0.19 | 0.0002 | 4.23 | 1,412× | yes |
+| KIO dialogs | linux-tree | 97,005 | size | desc | 338 | 30 | 0.11 | 0.0004 | 3.72 | 3,106× | yes² |
+| KIO dialogs | linux-tree | 97,005 | modified | asc | 476 | 73 | 0.32 | 0.0002 | 89 | 1,472× | yes² |
+| KIO dialogs | linux-tree | 97,005 | modified | desc | 356 | 163 | 0.27 | 0.0006 | 78 | 1,308× | yes² |
+| KIO dialogs | photos-100k | 100,000 | name | asc | 1384 | 90 | 0.21 | 0.0002 | 159 | 6,647× | yes |
+| KIO dialogs | photos-100k | 100,000 | name | desc | 1287 | 81 | 0.34 | 0.0004 | 142 | 3,775× | yes |
+| KIO dialogs | photos-100k | 100,000 | size | asc | 207 | 21 | 0.13 | 0.0001 | 3.76 | 1,585× | yes |
+| KIO dialogs | photos-100k | 100,000 | size | desc | 242 | 18 | 0.13 | 0.0004 | 4.13 | 1,895× | yes |
+| KIO dialogs | photos-100k | 100,000 | modified | asc | 96 | 16 | 0.08 | 0.0001 | 2.02 | 1,208× | yes |
+| KIO dialogs | photos-100k | 100,000 | modified | desc | 105 | 25 | 0.08 | 0.0004 | 1.98 | 1,291× | yes |
+| Krusader | usr-bin | 1,172 | name | asc | 1.97 | 0.23 | 0.0046 | 0.0002 | 0.30 | 428× | yes |
+| Krusader | usr-bin | 1,172 | name | desc | 1.92 | 0.22 | 0.02 | 0.0005 | 0.29 | 123× | yes |
+| Krusader | usr-bin | 1,172 | size | asc | 1.74 | 0.06 | 0.0076 | 0.0002 | 0.29 | 228× | yes |
+| Krusader | usr-bin | 1,172 | size | desc | 1.44 | 0.09 | 0.01 | 0.0004 | 0.27 | 109× | yes |
+| Krusader | usr-bin | 1,172 | modified | asc | 1.53 | 0.08 | 0.02 | 0.0002 | 0.45 | 90× | yes |
+| Krusader | usr-bin | 1,172 | modified | desc | 1.56 | 0.12 | 0.02 | 0.0003 | 0.44 | 69× | yes |
+| Krusader | usr-lib | 1,533 | name | asc | 2.05 | 0.17 | 0.03 | 0.0002 | 0.56 | 66× | yes |
+| Krusader | usr-lib | 1,533 | name | desc | 2.24 | 0.20 | 0.01 | 0.0006 | 0.57 | 163× | yes |
+| Krusader | usr-lib | 1,533 | size | asc | 1.69 | 0.05 | 0.03 | 0.0001 | 0.31 | 57× | yes |
+| Krusader | usr-lib | 1,533 | size | desc | 1.68 | 0.06 | 0.03 | 0.0004 | 0.31 | 56× | yes |
+| Krusader | usr-lib | 1,533 | modified | asc | 1.68 | 0.06 | 0.02 | 0.0001 | 0.53 | 79× | yes |
+| Krusader | usr-lib | 1,533 | modified | desc | 1.88 | 0.13 | 0.02 | 0.0004 | 0.53 | 79× | yes |
+| Krusader | node-modules-top | 395 | name | asc | 0.42 | 0.06 | 0.0042 | 0.0001 | 0.09 | 100× | yes |
+| Krusader | node-modules-top | 395 | name | desc | 0.40 | 0.21 | 0.0053 | 0.0004 | 0.10 | 75× | yes |
+| Krusader | node-modules-top | 395 | size | asc | 0.46 | 0.09 | 0.03 | 0.0002 | 0.34 | 13× | yes |
+| Krusader | node-modules-top | 395 | size | desc | 0.46 | 0.15 | 0.03 | 0.0004 | 0.41 | 14× | yes |
+| Krusader | node-modules-top | 395 | modified | asc | 0.43 | 0.06 | 0.03 | 0.0002 | 0.22 | 16× | yes |
+| Krusader | node-modules-top | 395 | modified | desc | 0.43 | 0.11 | 0.02 | 0.0004 | 0.23 | 28× | yes |
+| Krusader | node-modules-tree | 36,069 | name | asc | 168 | 2.63 | 0.11 | 0.0002 | 12 | 1,537× | yes² |
+| Krusader | node-modules-tree | 36,069 | name | desc | 210 | 6.01 | 0.06 | 0.0005 | 11 | 3,758× | yes² |
+| Krusader | node-modules-tree | 36,069 | size | asc | 123 | 2.10 | 0.17 | 0.0002 | 5.89 | 728× | yes² |
+| Krusader | node-modules-tree | 36,069 | size | desc | 135 | 2.73 | 0.10 | 0.0006 | 8.43 | 1,288× | yes² |
+| Krusader | node-modules-tree | 36,069 | modified | asc | 143 | 1.55 | 0.12 | 0.0002 | 8.12 | 1,203× | yes |
+| Krusader | node-modules-tree | 36,069 | modified | desc | 115 | 1.72 | 0.20 | 0.0006 | 7.32 | 587× | yes |
+| Krusader | usr-tree | 97,974 | name | asc | 583 | 12 | 0.54 | 0.0002 | 27 | 1,082× | yes² |
+| Krusader | usr-tree | 97,974 | name | desc | 671 | 14 | 0.19 | 0.0006 | 27 | 3,492× | yes² |
+| Krusader | usr-tree | 97,974 | size | asc | 450 | 5.08 | 0.51 | 0.0002 | 11 | 888× | yes² |
+| Krusader | usr-tree | 97,974 | size | desc | 415 | 6.21 | 0.32 | 0.0009 | 14 | 1,296× | yes² |
+| Krusader | usr-tree | 97,974 | modified | asc | 434 | 7.17 | 0.30 | 0.0002 | 27 | 1,441× | yes |
+| Krusader | usr-tree | 97,974 | modified | desc | 421 | 3.42 | 0.32 | 0.0005 | 18 | 1,314× | yes |
+| Krusader | linux-tree | 97,005 | name | asc | 760 | 44 | 0.23 | 0.0002 | 23 | 3,341× | yes² |
+| Krusader | linux-tree | 97,005 | name | desc | 685 | 67 | 0.17 | 0.0004 | 22 | 4,104× | yes² |
+| Krusader | linux-tree | 97,005 | size | asc | 422 | 3.59 | 0.13 | 0.0001 | 3.35 | 3,141× | yes |
+| Krusader | linux-tree | 97,005 | size | desc | 542 | 9.21 | 0.16 | 0.0007 | 5.21 | 3,312× | yes |
+| Krusader | linux-tree | 97,005 | modified | asc | 415 | 39 | 0.28 | 0.0002 | 44 | 1,505× | yes |
+| Krusader | linux-tree | 97,005 | modified | desc | 446 | 90 | 0.27 | 0.0008 | 40 | 1,669× | yes |
+| Krusader | photos-100k | 100,000 | name | asc | 801 | 40 | 0.19 | 0.0002 | 68 | 4,207× | yes |
+| Krusader | photos-100k | 100,000 | name | desc | 729 | 94 | 0.25 | 0.0004 | 68 | 2,946× | yes |
+| Krusader | photos-100k | 100,000 | size | asc | 404 | 1.64 | 0.14 | 0.0002 | 4.18 | 2,969× | yes |
+| Krusader | photos-100k | 100,000 | size | desc | 406 | 1.30 | 0.14 | 0.0005 | 3.81 | 2,807× | yes |
+| Krusader | photos-100k | 100,000 | modified | asc | 282 | 2.27 | 0.07 | 0.0002 | 1.91 | 3,822× | yes |
+| Krusader | photos-100k | 100,000 | modified | desc | 316 | 5.16 | 0.09 | 0.0003 | 2.56 | 3,485× | yes |
+| PCManFM-Qt | usr-bin | 1,172 | name | asc | 1.99 | 0.71 | 0.0054 | 0.0001 | 0.46 | 368× | yes |
+| PCManFM-Qt | usr-bin | 1,172 | name | desc | 3.26 | 1.05 | 0.02 | 0.0003 | 0.54 | 135× | yes |
+| PCManFM-Qt | usr-bin | 1,172 | size | asc | 0.34 | 0.07 | 0.0079 | 0.0002 | 0.21 | 44× | yes |
+| PCManFM-Qt | usr-bin | 1,172 | size | desc | 0.35 | 0.13 | 0.01 | 0.0004 | 0.21 | 24× | yes |
+| PCManFM-Qt | usr-bin | 1,172 | modified | asc | 0.38 | 0.11 | 0.02 | 0.0002 | 0.41 | 22× | yes |
+| PCManFM-Qt | usr-bin | 1,172 | modified | desc | 0.39 | 0.15 | 0.02 | 0.0004 | 0.40 | 19× | yes |
+| PCManFM-Qt | usr-lib | 1,533 | name | asc | 5.11 | 1.04 | 0.13 | 0.0002 | 1.58 | 39× | yes |
+| PCManFM-Qt | usr-lib | 1,533 | name | desc | 4.26 | 1.17 | 0.04 | 0.0004 | 1.81 | 95× | yes |
+| PCManFM-Qt | usr-lib | 1,533 | size | asc | 0.51 | 0.09 | 0.04 | 0.0003 | 0.35 | 15× | yes |
+| PCManFM-Qt | usr-lib | 1,533 | size | desc | 0.47 | 0.09 | 0.04 | 0.0006 | 0.32 | 13× | yes |
+| PCManFM-Qt | usr-lib | 1,533 | modified | asc | 0.49 | 0.09 | 0.02 | 0.0001 | 0.48 | 26× | yes |
+| PCManFM-Qt | usr-lib | 1,533 | modified | desc | 0.47 | 0.16 | 0.02 | 0.0005 | 0.48 | 22× | yes |
+| PCManFM-Qt | node-modules-top | 395 | name | asc | 0.57 | 0.30 | 0.0058 | 0.0002 | 0.11 | 99× | yes |
+| PCManFM-Qt | node-modules-top | 395 | name | desc | 0.46 | 1.26 | 0.01 | 0.0003 | 0.12 | 38× | yes |
+| PCManFM-Qt | node-modules-top | 395 | size | asc | 0.13 | 0.06 | 0.03 | 0.0002 | 0.27 | 5× | yes |
+| PCManFM-Qt | node-modules-top | 395 | size | desc | 0.11 | 0.12 | 0.03 | 0.0004 | 0.28 | 4× | yes |
+| PCManFM-Qt | node-modules-top | 395 | modified | asc | 0.12 | 0.06 | 0.02 | 0.0001 | 0.19 | 6× | yes |
+| PCManFM-Qt | node-modules-top | 395 | modified | desc | 0.12 | 0.11 | 0.01 | 0.0004 | 0.19 | 9× | yes |
+| PCManFM-Qt | node-modules-tree | 36,069 | name | asc | 251 | 8.98 | 0.19 | 0.0002 | 17 | 1,342× | yes² |
+| PCManFM-Qt | node-modules-tree | 36,069 | name | desc | 238 | 15 | 0.11 | 0.0006 | 13 | 2,136× | yes² |
+| PCManFM-Qt | node-modules-tree | 36,069 | size | asc | 62 | 2.62 | 0.13 | 0.0002 | 4.35 | 485× | yes² |
+| PCManFM-Qt | node-modules-tree | 36,069 | size | desc | 51 | 3.02 | 0.10 | 0.0006 | 4.32 | 537× | yes² |
+| PCManFM-Qt | node-modules-tree | 36,069 | modified | asc | 56 | 2.68 | 0.14 | 0.0002 | 6.42 | 401× | yes |
+| PCManFM-Qt | node-modules-tree | 36,069 | modified | desc | 68 | 4.72 | 0.21 | 0.0006 | 7.73 | 322× | yes² |
+| PCManFM-Qt | usr-tree | 97,974 | name | asc | 1184 | 22 | 0.65 | 0.0002 | 27 | 1,834× | yes² |
+| PCManFM-Qt | usr-tree | 97,974 | name | desc | 1048 | 50 | 0.28 | 0.0006 | 31 | 3,704× | yes² |
+| PCManFM-Qt | usr-tree | 97,974 | size | asc | 199 | 9.84 | 0.50 | 0.0002 | 15 | 399× | yes² |
+| PCManFM-Qt | usr-tree | 97,974 | size | desc | 178 | 9.96 | 0.22 | 0.0006 | 10 | 824× | yes² |
+| PCManFM-Qt | usr-tree | 97,974 | modified | asc | 224 | 8.61 | 0.27 | 0.0002 | 16 | 828× | yes² |
+| PCManFM-Qt | usr-tree | 97,974 | modified | desc | 225 | 8.81 | 0.38 | 0.0006 | 17 | 593× | yes² |
+| PCManFM-Qt | linux-tree | 97,005 | name | asc | 1265 | 106 | 1.95 | 0.0001 | 22 | 647× | yes² |
+| PCManFM-Qt | linux-tree | 97,005 | name | desc | 1212 | 122 | 0.32 | 0.0004 | 28 | 3,793× | yes² |
+| PCManFM-Qt | linux-tree | 97,005 | size | asc | 171 | 6.69 | 0.20 | 0.0003 | 4.41 | 877× | yes |
+| PCManFM-Qt | linux-tree | 97,005 | size | desc | 190 | 7.57 | 0.15 | 0.0004 | 4.10 | 1,282× | yes² |
+| PCManFM-Qt | linux-tree | 97,005 | modified | asc | 162 | 35 | 0.23 | 0.0002 | 33 | 699× | yes² |
+| PCManFM-Qt | linux-tree | 97,005 | modified | desc | 178 | 110 | 0.26 | 0.0004 | 42 | 683× | yes² |
+| PCManFM-Qt | photos-100k | 100,000 | name | asc | 1499 | 152 | 0.20 | 0.0002 | 170 | 7,640× | yes |
+| PCManFM-Qt | photos-100k | 100,000 | name | desc | 1420 | 105 | 0.40 | 0.0003 | 206 | 3,582× | yes |
+| PCManFM-Qt | photos-100k | 100,000 | size | asc | 128 | 4.14 | 0.16 | 0.0003 | 4.30 | 801× | yes |
+| PCManFM-Qt | photos-100k | 100,000 | size | desc | 117 | 3.22 | 0.13 | 0.0003 | 3.43 | 878× | yes |
+| PCManFM-Qt | photos-100k | 100,000 | modified | asc | 50 | 10 | 0.13 | 0.0002 | 3.25 | 384× | yes |
+| PCManFM-Qt | photos-100k | 100,000 | modified | desc | 48 | 7.65 | 0.09 | 0.0004 | 2.58 | 519× | yes |
+
+### Terminal managers: nnn, and C++ ports of yazi and lf
+
+nnn: glibc `qsort()` of its entry array with `entrycmp()`. For yazi and lf the re-sort here is
+the C++ port; their native times are in the next tables.
+
+| project | dataset | entries | column | order | project's re-sort | partial_sort | Bucketization switch | cached | pre-sort (once) | speed-up | valid order |
+|---|---|---:|---|---|---:|---:|---:|---:|---:|---:|:---:|
+| lf (C++ port) | usr-bin | 1,172 | name | asc | 5.19 | 1.24 | 0.0095 | 0.0002 | 0.90 | 546× | yes |
+| lf (C++ port) | usr-bin | 1,172 | name | desc | 5.80 | 1.47 | 0.06 | 0.0006 | 0.97 | 91× | yes |
+| lf (C++ port) | usr-bin | 1,172 | size | asc | 0.08 | 0.01 | 0.0043 | 0.0002 | 0.11 | 19× | yes² |
+| lf (C++ port) | usr-bin | 1,172 | size | desc | 0.10 | 0.03 | 0.0053 | 0.0007 | 0.11 | 18× | yes² |
+| lf (C++ port) | usr-bin | 1,172 | modified | asc | 0.08 | 0.02 | 0.0047 | 0.0002 | 0.10 | 17× | yes² |
+| lf (C++ port) | usr-bin | 1,172 | modified | desc | 0.07 | 0.02 | 0.0092 | 0.0006 | 0.10 | 7× | yes² |
+| lf (C++ port) | usr-lib | 1,533 | name | asc | 12 | 1.86 | 0.32 | 0.0002 | 3.28 | 36× | yes |
+| lf (C++ port) | usr-lib | 1,533 | name | desc | 11 | 1.67 | 0.05 | 0.0005 | 3.33 | 237× | yes |
+| lf (C++ port) | usr-lib | 1,533 | size | asc | 0.09 | 0.0086 | 0.0038 | 0.0001 | 0.11 | 23× | yes² |
+| lf (C++ port) | usr-lib | 1,533 | size | desc | 0.09 | 0.0089 | 0.0048 | 0.0006 | 0.10 | 19× | yes² |
+| lf (C++ port) | usr-lib | 1,533 | modified | asc | 0.07 | 0.01 | 0.0041 | 0.0001 | 0.08 | 16× | yes² |
+| lf (C++ port) | usr-lib | 1,533 | modified | desc | 0.07 | 0.0095 | 0.0052 | 0.0005 | 0.09 | 13× | yes² |
+| lf (C++ port) | node-modules-top | 395 | name | asc | 1.35 | 0.58 | 0.0076 | 0.0001 | 0.16 | 178× | yes |
+| lf (C++ port) | node-modules-top | 395 | name | desc | 1.39 | 0.63 | 0.01 | 0.0004 | 0.16 | 110× | yes |
+| lf (C++ port) | node-modules-top | 395 | size | asc | 0.0077 | 0.0026 | 0.0024 | 0.0001 | 0.02 | 3× | yes² |
+| lf (C++ port) | node-modules-top | 395 | size | desc | 0.0083 | 0.0024 | 0.0028 | 0.0003 | 0.02 | 3× | yes² |
+| lf (C++ port) | node-modules-top | 395 | modified | asc | 0.02 | 0.0090 | 0.0018 | 0.0001 | 0.02 | 9× | yes² |
+| lf (C++ port) | node-modules-top | 395 | modified | desc | 0.02 | 0.01 | 0.0024 | 0.0004 | 0.02 | 7× | yes² |
+| lf (C++ port) | node-modules-tree | 36,069 | name | asc | 330 | 3.09 | 0.27 | 0.0002 | 15 | 1,244× | yes² |
+| lf (C++ port) | node-modules-tree | 36,069 | name | desc | 316 | 2.57 | 0.09 | 0.0004 | 14 | 3,641× | yes² |
+| lf (C++ port) | node-modules-tree | 36,069 | size | asc | 5.07 | 0.14 | 0.08 | 0.0002 | 1.33 | 62× | yes² |
+| lf (C++ port) | node-modules-tree | 36,069 | size | desc | 5.41 | 0.19 | 0.09 | 0.0006 | 1.60 | 58× | yes² |
+| lf (C++ port) | node-modules-tree | 36,069 | modified | asc | 4.89 | 0.20 | 0.08 | 0.0002 | 1.55 | 64× | yes² |
+| lf (C++ port) | node-modules-tree | 36,069 | modified | desc | 4.28 | 0.22 | 0.06 | 0.0005 | 1.30 | 75× | yes² |
+| lf (C++ port) | usr-tree | 97,974 | name | asc | 1047 | 4.09 | 0.25 | 0.0002 | 38 | 4,242× | yes² |
+| lf (C++ port) | usr-tree | 97,974 | name | desc | 941 | 4.22 | 0.18 | 0.0006 | 36 | 5,171× | yes² |
+| lf (C++ port) | usr-tree | 97,974 | size | asc | 19 | 0.52 | 0.26 | 0.0002 | 3.35 | 75× | yes² |
+| lf (C++ port) | usr-tree | 97,974 | size | desc | 21 | 0.63 | 0.43 | 0.0007 | 3.95 | 49× | yes² |
+| lf (C++ port) | usr-tree | 97,974 | modified | asc | 17 | 0.66 | 0.21 | 0.0002 | 3.51 | 82× | yes² |
+| lf (C++ port) | usr-tree | 97,974 | modified | desc | 17 | 0.64 | 0.22 | 0.0006 | 3.33 | 74× | yes² |
+| lf (C++ port) | linux-tree | 97,005 | name | asc | 1151 | 64 | 1.03 | 0.0002 | 33 | 1,121× | yes² |
+| lf (C++ port) | linux-tree | 97,005 | name | desc | 1008 | 56 | 0.33 | 0.0004 | 26 | 3,066× | yes² |
+| lf (C++ port) | linux-tree | 97,005 | size | asc | 20 | 0.70 | 0.14 | 0.0002 | 4.03 | 145× | yes |
+| lf (C++ port) | linux-tree | 97,005 | size | desc | 30 | 1.30 | 0.15 | 0.0006 | 5.35 | 198× | yes² |
+| lf (C++ port) | linux-tree | 97,005 | modified | asc | 8.82 | 0.96 | 0.96 | 0.0002 | 2.54 | 9× | yes² |
+| lf (C++ port) | linux-tree | 97,005 | modified | desc | 8.73 | 0.91 | 0.86 | 0.0003 | 2.33 | 10× | yes² |
+| lf (C++ port) | photos-100k | 100,000 | name | asc | 1398 | 80 | 0.25 | 0.0002 | 182 | 5,702× | yes |
+| lf (C++ port) | photos-100k | 100,000 | name | desc | 1388 | 80 | 0.31 | 0.0005 | 184 | 4,517× | yes |
+| lf (C++ port) | photos-100k | 100,000 | size | asc | 18 | 0.82 | 0.19 | 0.0002 | 4.58 | 94× | yes |
+| lf (C++ port) | photos-100k | 100,000 | size | desc | 24 | 0.77 | 0.18 | 0.0007 | 4.36 | 133× | yes² |
+| lf (C++ port) | photos-100k | 100,000 | modified | asc | 11 | 1.15 | 0.09 | 0.0001 | 2.72 | 116× | yes |
+| lf (C++ port) | photos-100k | 100,000 | modified | desc | 10 | 1.95 | 0.09 | 0.0004 | 2.66 | 111× | yes |
+| nnn | usr-bin | 1,172 | name | asc | 1.03 | 0.21 | 0.0074 | 0.0002 | 1.01 | 139× | yes |
+| nnn | usr-bin | 1,172 | name | desc | 0.94 | 0.25 | 0.02 | 0.0005 | 1.03 | 39× | yes |
+| nnn | usr-bin | 1,172 | size | asc | 0.19 | 0.05 | 0.01 | 0.0002 | 0.23 | 14× | yes |
+| nnn | usr-bin | 1,172 | size | desc | 0.21 | 0.04 | 0.0071 | 0.0005 | 0.24 | 30× | yes |
+| nnn | usr-bin | 1,172 | modified | asc | 0.47 | 0.11 | 0.02 | 0.0002 | 0.59 | 22× | yes |
+| nnn | usr-bin | 1,172 | modified | desc | 0.53 | 0.11 | 0.02 | 0.0007 | 0.56 | 28× | yes |
+| nnn | usr-lib | 1,533 | name | asc | 2.22 | 0.40 | 0.09 | 0.0002 | 2.91 | 23× | yes |
+| nnn | usr-lib | 1,533 | name | desc | 2.09 | 0.28 | 0.04 | 0.0006 | 2.68 | 54× | yes |
+| nnn | usr-lib | 1,533 | size | asc | 0.34 | 0.04 | 0.02 | 0.0001 | 0.42 | 14× | yes |
+| nnn | usr-lib | 1,533 | size | desc | 0.36 | 0.03 | 0.03 | 0.0005 | 0.40 | 14× | yes |
+| nnn | usr-lib | 1,533 | modified | asc | 0.52 | 0.06 | 0.02 | 0.0002 | 0.74 | 21× | yes |
+| nnn | usr-lib | 1,533 | modified | desc | 0.58 | 0.18 | 0.03 | 0.0005 | 0.70 | 22× | yes |
+| nnn | node-modules-top | 395 | name | asc | 0.10 | 0.03 | 0.0050 | 0.0001 | 0.26 | 19× | yes |
+| nnn | node-modules-top | 395 | name | desc | 0.12 | 0.17 | 0.0061 | 0.0004 | 0.25 | 19× | yes |
+| nnn | node-modules-top | 395 | size | asc | 0.17 | 0.09 | 0.03 | 0.0001 | 0.24 | 7× | yes |
+| nnn | node-modules-top | 395 | size | desc | 0.19 | 0.09 | 0.02 | 0.0005 | 0.25 | 8× | yes |
+| nnn | node-modules-top | 395 | modified | asc | 0.04 | 0.02 | 0.0020 | 0.0001 | 0.04 | 20× | yes |
+| nnn | node-modules-top | 395 | modified | desc | 0.05 | 0.03 | 0.0070 | 0.0004 | 0.05 | 7× | yes |
+| nnn | node-modules-tree | 36,069 | name | asc | 51 | 0.77 | 0.08 | 0.0002 | 38 | 602× | yes² |
+| nnn | node-modules-tree | 36,069 | name | desc | 54 | 3.05 | 0.08 | 0.0005 | 26 | 677× | yes² |
+| nnn | node-modules-tree | 36,069 | size | asc | 13 | 0.82 | 0.07 | 0.0001 | 3.64 | 183× | yes² |
+| nnn | node-modules-tree | 36,069 | size | desc | 14 | 0.93 | 0.08 | 0.0004 | 3.82 | 177× | yes² |
+| nnn | node-modules-tree | 36,069 | modified | asc | 12 | 0.62 | 0.08 | 0.0002 | 1.93 | 141× | yes |
+| nnn | node-modules-tree | 36,069 | modified | desc | 19 | 0.73 | 0.10 | 0.0005 | 1.88 | 186× | yes² |
+| nnn | usr-tree | 97,974 | name | asc | 166 | 2.35 | 0.17 | 0.0001 | 66 | 991× | yes² |
+| nnn | usr-tree | 97,974 | name | desc | 181 | 7.70 | 0.24 | 0.0006 | 66 | 752× | yes² |
+| nnn | usr-tree | 97,974 | size | asc | 42 | 1.51 | 0.13 | 0.0001 | 6.14 | 318× | yes² |
+| nnn | usr-tree | 97,974 | size | desc | 43 | 2.71 | 0.21 | 0.0007 | 8.12 | 205× | yes² |
+| nnn | usr-tree | 97,974 | modified | asc | 74 | 1.60 | 0.24 | 0.0001 | 9.14 | 315× | yes |
+| nnn | usr-tree | 97,974 | modified | desc | 82 | 2.08 | 0.28 | 0.0006 | 10 | 298× | yes² |
+| nnn | linux-tree | 97,005 | name | asc | 172 | 8.25 | 0.20 | 0.0002 | 56 | 847× | yes² |
+| nnn | linux-tree | 97,005 | name | desc | 290 | 12 | 0.21 | 0.0004 | 64 | 1,379× | yes² |
+| nnn | linux-tree | 97,005 | size | asc | 30 | 1.50 | 0.14 | 0.0002 | 4.16 | 217× | yes |
+| nnn | linux-tree | 97,005 | size | desc | 33 | 1.63 | 0.19 | 0.0004 | 4.12 | 176× | yes² |
+| nnn | linux-tree | 97,005 | modified | asc | 67 | 4.35 | 0.26 | 0.0001 | 20 | 261× | yes |
+| nnn | linux-tree | 97,005 | modified | desc | 66 | 77 | 0.21 | 0.0004 | 21 | 312× | yes² |
+| nnn | photos-100k | 100,000 | name | asc | 282 | 14 | 0.23 | 0.0002 | 106 | 1,246× | yes |
+| nnn | photos-100k | 100,000 | name | desc | 263 | 11 | 0.26 | 0.0005 | 97 | 1,023× | yes |
+| nnn | photos-100k | 100,000 | size | asc | 17 | 0.72 | 0.14 | 0.0002 | 3.42 | 119× | yes |
+| nnn | photos-100k | 100,000 | size | desc | 22 | 1.04 | 0.13 | 0.0006 | 4.55 | 162× | yes |
+| nnn | photos-100k | 100,000 | modified | asc | 7.70 | 3.19 | 0.11 | 0.0002 | 2.58 | 72× | yes |
+| nnn | photos-100k | 100,000 | modified | desc | 8.82 | 1.83 | 0.11 | 0.0005 | 3.09 | 81× | yes |
+| yazi (C++ port) | usr-bin | 1,172 | name | asc | 0.40 | 0.07 | 0.0043 | 0.0002 | 0.09 | 93× | yes |
+| yazi (C++ port) | usr-bin | 1,172 | name | desc | 0.44 | 0.07 | 0.0077 | 0.0005 | 0.10 | 57× | yes |
+| yazi (C++ port) | usr-bin | 1,172 | size | asc | 0.25 | 0.02 | 0.0051 | 0.0002 | 0.15 | 48× | yes |
+| yazi (C++ port) | usr-bin | 1,172 | size | desc | 0.26 | 0.05 | 0.0064 | 0.0007 | 0.15 | 40× | yes |
+| yazi (C++ port) | usr-bin | 1,172 | modified | asc | 0.30 | 0.04 | 0.0063 | 0.0002 | 0.15 | 48× | yes |
+| yazi (C++ port) | usr-bin | 1,172 | modified | desc | 0.29 | 0.05 | 0.0071 | 0.0006 | 0.14 | 41× | yes |
+| yazi (C++ port) | usr-lib | 1,533 | name | asc | 0.62 | 0.06 | 0.02 | 0.0002 | 0.19 | 31× | yes |
+| yazi (C++ port) | usr-lib | 1,533 | name | desc | 0.56 | 0.06 | 0.0093 | 0.0007 | 0.18 | 60× | yes |
+| yazi (C++ port) | usr-lib | 1,533 | size | asc | 0.18 | 0.02 | 0.0078 | 0.0001 | 0.13 | 23× | yes |
+| yazi (C++ port) | usr-lib | 1,533 | size | desc | 0.17 | 0.02 | 0.0081 | 0.0005 | 0.12 | 21× | yes |
+| yazi (C++ port) | usr-lib | 1,533 | modified | asc | 0.20 | 0.02 | 0.0077 | 0.0002 | 0.13 | 27× | yes |
+| yazi (C++ port) | usr-lib | 1,533 | modified | desc | 0.21 | 0.03 | 0.0064 | 0.0005 | 0.15 | 33× | yes |
+| yazi (C++ port) | node-modules-top | 395 | name | asc | 0.05 | 0.01 | 0.0017 | 0.0001 | 0.02 | 29× | yes |
+| yazi (C++ port) | node-modules-top | 395 | name | desc | 0.17 | 0.06 | 0.0033 | 0.0004 | 0.03 | 52× | yes |
+| yazi (C++ port) | node-modules-top | 395 | size | asc | 0.07 | 0.02 | 0.0067 | 0.0001 | 0.08 | 10× | yes |
+| yazi (C++ port) | node-modules-top | 395 | size | desc | 0.07 | 0.02 | 0.0069 | 0.0004 | 0.08 | 10× | yes |
+| yazi (C++ port) | node-modules-top | 395 | modified | asc | 0.05 | 0.02 | 0.0028 | 0.0001 | 0.03 | 17× | yes |
+| yazi (C++ port) | node-modules-top | 395 | modified | desc | 0.05 | 0.02 | 0.0021 | 0.0004 | 0.03 | 22× | yes |
+| yazi (C++ port) | node-modules-tree | 36,069 | name | asc | 16 | 1.47 | 0.11 | 0.0003 | 3.23 | 152× | yes² |
+| yazi (C++ port) | node-modules-tree | 36,069 | name | desc | 16 | 1.18 | 0.06 | 0.0005 | 2.65 | 264× | yes² |
+| yazi (C++ port) | node-modules-tree | 36,069 | size | asc | 9.42 | 1.51 | 0.18 | 0.0002 | 3.98 | 52× | yes² |
+| yazi (C++ port) | node-modules-tree | 36,069 | size | desc | 9.39 | 0.70 | 0.06 | 0.0004 | 2.95 | 151× | yes² |
+| yazi (C++ port) | node-modules-tree | 36,069 | modified | asc | 9.49 | 0.72 | 0.07 | 0.0002 | 1.78 | 139× | yes² |
+| yazi (C++ port) | node-modules-tree | 36,069 | modified | desc | 8.81 | 0.56 | 0.07 | 0.0005 | 1.54 | 133× | yes² |
+| yazi (C++ port) | usr-tree | 97,974 | name | asc | 55 | 2.06 | 0.24 | 0.0002 | 4.50 | 226× | yes² |
+| yazi (C++ port) | usr-tree | 97,974 | name | desc | 51 | 2.23 | 0.16 | 0.0005 | 4.34 | 309× | yes² |
+| yazi (C++ port) | usr-tree | 97,974 | size | asc | 32 | 2.20 | 0.19 | 0.0001 | 6.56 | 170× | yes² |
+| yazi (C++ port) | usr-tree | 97,974 | size | desc | 33 | 2.19 | 0.19 | 0.0006 | 6.07 | 180× | yes² |
+| yazi (C++ port) | usr-tree | 97,974 | modified | asc | 34 | 2.92 | 0.26 | 0.0002 | 6.99 | 129× | yes² |
+| yazi (C++ port) | usr-tree | 97,974 | modified | desc | 25 | 2.87 | 0.26 | 0.0006 | 5.84 | 99× | yes² |
+| yazi (C++ port) | linux-tree | 97,005 | name | asc | 111 | 5.91 | 0.33 | 0.0002 | 3.93 | 337× | yes² |
+| yazi (C++ port) | linux-tree | 97,005 | name | desc | 60 | 6.57 | 0.23 | 0.0004 | 4.31 | 258× | yes² |
+| yazi (C++ port) | linux-tree | 97,005 | size | asc | 30 | 2.30 | 0.18 | 0.0001 | 4.13 | 164× | yes² |
+| yazi (C++ port) | linux-tree | 97,005 | size | desc | 32 | 2.08 | 0.10 | 0.0005 | 3.70 | 330× | yes² |
+| yazi (C++ port) | linux-tree | 97,005 | modified | asc | 33 | 4.33 | 0.27 | 0.0001 | 8.73 | 123× | yes² |
+| yazi (C++ port) | linux-tree | 97,005 | modified | desc | 44 | 28 | 0.17 | 0.0004 | 12 | 266× | yes² |
+| yazi (C++ port) | photos-100k | 100,000 | name | asc | 71 | 6.60 | 0.15 | 0.0001 | 6.12 | 476× | yes |
+| yazi (C++ port) | photos-100k | 100,000 | name | desc | 73 | 6.22 | 0.17 | 0.0005 | 6.99 | 432× | yes |
+| yazi (C++ port) | photos-100k | 100,000 | size | asc | 18 | 1.25 | 0.13 | 0.0001 | 3.59 | 142× | yes |
+| yazi (C++ port) | photos-100k | 100,000 | size | desc | 20 | 1.56 | 0.15 | 0.0005 | 4.55 | 129× | yes |
+| yazi (C++ port) | photos-100k | 100,000 | modified | asc | 22 | 2.82 | 0.10 | 0.0002 | 2.94 | 214× | yes |
+| yazi (C++ port) | photos-100k | 100,000 | modified | desc | 26 | 4.55 | 0.09 | 0.0005 | 2.62 | 291× | yes |
+
+### yazi: native Rust re-sort vs. Bucketization
+
+yazi's `FilesSorter::sort` (`sort_unstable_by`) compiled with rustc, on yazi's `File` reduced to the
+fields it reads. Bucketization: the C++ port of the same comparison (a Rust port is a prerequisite
+for contributing).
+
+| dataset | entries | column | order | native re-sort | C++ port re-sort | Bucketization switch (port) | speed-up vs native | same order as native³ |
+|---|---:|---|---|---:|---:|---:|---:|:---:|
+| usr-bin | 1,172 | name | asc | 0.21 | 0.40 | 0.0043 | 49× | yes |
+| usr-bin | 1,172 | name | desc | 0.21 | 0.44 | 0.0077 | 28× | yes |
+| usr-bin | 1,172 | size | asc | 0.10 | 0.25 | 0.0051 | 20× | yes |
+| usr-bin | 1,172 | size | desc | 0.09 | 0.26 | 0.0064 | 14× | yes |
+| usr-bin | 1,172 | modified | asc | 0.12 | 0.30 | 0.0063 | 19× | yes |
+| usr-bin | 1,172 | modified | desc | 0.12 | 0.29 | 0.0071 | 18× | yes |
+| usr-lib | 1,533 | name | asc | 0.57 | 0.62 | 0.02 | 28× | yes |
+| usr-lib | 1,533 | name | desc | 0.36 | 0.56 | 0.0093 | 38× | yes |
+| usr-lib | 1,533 | size | asc | 0.12 | 0.18 | 0.0078 | 15× | yes |
+| usr-lib | 1,533 | size | desc | 0.12 | 0.17 | 0.0081 | 15× | yes |
+| usr-lib | 1,533 | modified | asc | 0.15 | 0.20 | 0.0077 | 19× | yes |
+| usr-lib | 1,533 | modified | desc | 0.15 | 0.21 | 0.0064 | 24× | yes |
+| node-modules-top | 395 | name | asc | 0.0045 | 0.05 | 0.0017 | 3× | yes |
+| node-modules-top | 395 | name | desc | 0.03 | 0.17 | 0.0033 | 10× | yes |
+| node-modules-top | 395 | size | asc | 0.04 | 0.07 | 0.0067 | 5× | yes |
+| node-modules-top | 395 | size | desc | 0.04 | 0.07 | 0.0069 | 5× | yes |
+| node-modules-top | 395 | modified | asc | 0.03 | 0.05 | 0.0028 | 10× | yes |
+| node-modules-top | 395 | modified | desc | 0.03 | 0.05 | 0.0021 | 15× | yes |
+| node-modules-tree | 36,069 | name | asc | 12 | 16 | 0.11 | 112× | ties |
+| node-modules-tree | 36,069 | name | desc | 10 | 16 | 0.06 | 175× | ties |
+| node-modules-tree | 36,069 | size | asc | 6.66 | 9.42 | 0.18 | 37× | ties |
+| node-modules-tree | 36,069 | size | desc | 6.49 | 9.39 | 0.06 | 104× | ties |
+| node-modules-tree | 36,069 | modified | asc | 7.41 | 9.49 | 0.07 | 109× | ties |
+| node-modules-tree | 36,069 | modified | desc | 6.33 | 8.81 | 0.07 | 95× | ties |
+| usr-tree | 97,974 | name | asc | 36 | 55 | 0.24 | 147× | ties |
+| usr-tree | 97,974 | name | desc | 41 | 51 | 0.16 | 248× | ties |
+| usr-tree | 97,974 | size | asc | 20 | 32 | 0.19 | 106× | ties |
+| usr-tree | 97,974 | size | desc | 18 | 33 | 0.19 | 99× | ties |
+| usr-tree | 97,974 | modified | asc | 19 | 34 | 0.26 | 74× | ties |
+| usr-tree | 97,974 | modified | desc | 19 | 25 | 0.26 | 74× | ties |
+| linux-tree | 97,005 | name | asc | 44 | 111 | 0.33 | 134× | ties |
+| linux-tree | 97,005 | name | desc | 39 | 60 | 0.23 | 166× | ties |
+| linux-tree | 97,005 | size | asc | 21 | 30 | 0.18 | 116× | ties |
+| linux-tree | 97,005 | size | desc | 25 | 32 | 0.10 | 255× | ties |
+| linux-tree | 97,005 | modified | asc | 17 | 33 | 0.27 | 64× | ties |
+| linux-tree | 97,005 | modified | desc | 14 | 44 | 0.17 | 82× | ties |
+| photos-100k | 100,000 | name | asc | 63 | 71 | 0.15 | 425× | yes |
+| photos-100k | 100,000 | name | desc | 62 | 73 | 0.17 | 366× | yes |
+| photos-100k | 100,000 | size | asc | 16 | 18 | 0.13 | 126× | yes |
+| photos-100k | 100,000 | size | desc | 16 | 20 | 0.15 | 101× | yes |
+| photos-100k | 100,000 | modified | asc | 12 | 22 | 0.10 | 119× | yes |
+| photos-100k | 100,000 | modified | desc | 15 | 26 | 0.09 | 167× | yes |
+
+### lf: native Go re-sort vs. Bucketization
+
+lf's `dir.sort()` compiled with Go. lf normalizes both names (lowercase, strip diacritics) on
+every comparison, so most of its time is allocation. Bucketization: the C++ port of the
+comparison (a Go port is a prerequisite for contributing).
+
+| dataset | entries | column | order | native re-sort | C++ port re-sort | native, lf defaults¹ | native, names normalized once⁴ | Bucketization switch (port) | speed-up vs native | same order as native³ |
+|---|---:|---|---|---:|---:|---:|---:|---:|---:|:---:|
+| usr-bin | 1,172 | name | asc | 12 | 5.19 | 7.78 | 1.54 | 0.0095 | 1,239× | yes |
+| usr-bin | 1,172 | name | desc | 7.59 | 5.80 | 7.39 | 1.65 | 0.06 | 119× | yes |
+| usr-bin | 1,172 | size | asc | 0.26 | 0.08 | 0.34 | 0.25 | 0.0043 | 60× | yes |
+| usr-bin | 1,172 | size | desc | 0.27 | 0.10 | 0.35 | 0.28 | 0.0053 | 51× | yes |
+| usr-bin | 1,172 | modified | asc | 0.19 | 0.08 | 0.28 | 0.20 | 0.0047 | 41× | yes |
+| usr-bin | 1,172 | modified | desc | 0.27 | 0.07 | 0.25 | 0.16 | 0.0092 | 29× | yes |
+| usr-lib | 1,533 | name | asc | 16 | 12 | 15 | 3.69 | 0.32 | 51× | yes |
+| usr-lib | 1,533 | name | desc | 17 | 11 | 15 | 2.48 | 0.05 | 364× | yes |
+| usr-lib | 1,533 | size | asc | 0.35 | 0.09 | 0.45 | 0.34 | 0.0038 | 93× | yes |
+| usr-lib | 1,533 | size | desc | 0.38 | 0.09 | 0.50 | 0.35 | 0.0048 | 79× | yes |
+| usr-lib | 1,533 | modified | asc | 0.24 | 0.07 | 0.32 | 0.35 | 0.0041 | 58× | yes |
+| usr-lib | 1,533 | modified | desc | 0.26 | 0.07 | 0.50 | 0.26 | 0.0052 | 50× | yes |
+| node-modules-top | 395 | name | asc | 2.75 | 1.35 | 2.55 | 0.65 | 0.0076 | 362× | yes |
+| node-modules-top | 395 | name | desc | 2.55 | 1.39 | 2.44 | 0.51 | 0.01 | 201× | yes |
+| node-modules-top | 395 | size | asc | 0.0090 | 0.0077 | 0.04 | 0.0089 | 0.0024 | 4× | yes |
+| node-modules-top | 395 | size | desc | 0.01 | 0.0083 | 0.04 | 0.01 | 0.0028 | 4× | yes |
+| node-modules-top | 395 | modified | asc | 0.08 | 0.02 | 0.11 | 0.08 | 0.0018 | 46× | yes |
+| node-modules-top | 395 | modified | desc | 0.10 | 0.02 | 0.11 | 0.12 | 0.0024 | 43× | yes |
+| node-modules-tree | 36,069 | name | asc | 599 | 330 | 674 | 110 | 0.27 | 2,260× | yes |
+| node-modules-tree | 36,069 | name | desc | 651 | 316 | 637 | 114 | 0.09 | 7,501× | yes |
+| node-modules-tree | 36,069 | size | asc | 27 | 5.07 | 36 | 28 | 0.08 | 333× | yes |
+| node-modules-tree | 36,069 | size | desc | 23 | 5.41 | 30 | 27 | 0.09 | 252× | yes |
+| node-modules-tree | 36,069 | modified | asc | 26 | 4.89 | 36 | 34 | 0.08 | 347× | yes |
+| node-modules-tree | 36,069 | modified | desc | 28 | 4.28 | 36 | 21 | 0.06 | 485× | yes |
+| usr-tree | 97,974 | name | asc | 1862 | 1047 | 1955 | 404 | 0.25 | 7,546× | yes |
+| usr-tree | 97,974 | name | desc | 2003 | 941 | 2203 | 391 | 0.18 | 11,009× | yes |
+| usr-tree | 97,974 | size | asc | 78 | 19 | 87 | 60 | 0.26 | 303× | yes |
+| usr-tree | 97,974 | size | desc | 77 | 21 | 105 | 76 | 0.43 | 180× | yes |
+| usr-tree | 97,974 | modified | asc | 34 | 17 | 67 | 53 | 0.21 | 159× | yes |
+| usr-tree | 97,974 | modified | desc | 43 | 17 | 77 | 41 | 0.22 | 191× | yes |
+| linux-tree | 97,005 | name | asc | 2345 | 1151 | 2233 | 452 | 1.03 | 2,284× | yes |
+| linux-tree | 97,005 | name | desc | 2098 | 1008 | 2148 | 404 | 0.33 | 6,384× | yes |
+| linux-tree | 97,005 | size | asc | 67 | 20 | 102 | 84 | 0.14 | 477× | yes |
+| linux-tree | 97,005 | size | desc | 82 | 30 | 96 | 84 | 0.15 | 547× | yes |
+| linux-tree | 97,005 | modified | asc | 8.01 | 8.82 | 34 | 7.15 | 0.96 | 8× | yes |
+| linux-tree | 97,005 | modified | desc | 8.13 | 8.73 | 38 | 8.30 | 0.86 | 9× | yes |
+| photos-100k | 100,000 | name | asc | 2969 | 1398 | 3028 | 449 | 0.25 | 12,108× | yes |
+| photos-100k | 100,000 | name | desc | 3050 | 1388 | 3031 | 481 | 0.31 | 9,924× | yes |
+| photos-100k | 100,000 | size | asc | 82 | 18 | 107 | 87 | 0.19 | 437× | yes |
+| photos-100k | 100,000 | size | desc | 90 | 24 | 104 | 89 | 0.18 | 494× | yes |
+| photos-100k | 100,000 | modified | asc | 15 | 11 | 39 | 16 | 0.09 | 162× | yes |
+| photos-100k | 100,000 | modified | desc | 26 | 10 | 52 | 28 | 0.09 | 279× | yes |
+
+¹ lf's default hides dotfiles: `dir.sort()` then also runs a stable partition with a glob match
+per comparison, over all entries.
+² Valid, but tied items (equal names in the flattened-tree datasets, equal sizes or times where
+the project has no tie-breaker) are in a different order than the project's sort left them.
+Ties are allowed by the project's comparison; real folders have no equal names.
+³ The C++ port's own sort produced the same order as the native program (same order hash).
+"ties": equal items are ordered differently (unstable sorts), the order is otherwise the same.
+⁴ Not lf's code: the same `dir.sort()` with each name normalized once per sort instead of on
+every comparison. It produces the same order; it is an improvement lf could make on its own.

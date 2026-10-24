@@ -90,7 +90,9 @@ int main(void) {
 - Architecture: `docs/architecture/overview.md`
 - Bucketization design and cross-language spec: `docs/bucketization/README.md`
 - Bucketization benchmarks against real file manager stacks (Dolphin, GNOME family): `docs/bucketization/benchmarks.md`
+- Bucketization in the sort code of 10 more file managers (GNOME family, Qt, terminal): `docs/bucketization/cross-project-benchmarks.md`
 - How file managers sort today, and where to contribute: `docs/bucketization/file-manager-survey.md`
+- Launch-day contribution plan and per-project kits: `docs/bucketization/launch/README.md`
 - Plan for contributing to KDE Dolphin: `docs/bucketization/kde-contribution-plan.md`
 - Benchmark analysis: `docs/papers/binary_search_results_analysis.md`
 - Benchmark methodology baseline: `BENCHMARKS.md`

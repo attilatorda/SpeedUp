@@ -26,13 +26,13 @@ The differences are in how expensive one comparison is:
 | File manager | Language / toolkit | On sort change | Name comparison | Cached keys | License | Fit |
 |---|---|---|---|---|---|---|
 | **Dolphin** (KDE) | C++ / Qt 6 | `KFileItemModel::resortAllItems()`: full parallel merge sort, then rebuilds the URL→row hash and the moved-items list | `QCollator` + Dolphin's decimal-aware natural compare | no | GPL-2.0-or-later | **high**: largest measured gains |
-| KDE file dialogs (KIO) | C++ / Qt 6 | `KDirSortFilterProxyModel` (QSortFilterProxyModel) re-sorts everything | `QCollator` | no | LGPL | medium: Qt's proxy model owns the sort |
-| Krusader | C++ / Qt 6 | `KrSort::Sorter::sort()`: `std::stable_sort` | `QString::localeAwareCompare` per character | no | GPL-2.0-or-later | medium-high: owns its sort |
-| PCManFM-Qt (libfm-qt) | C++ / Qt | `ProxyFolderModel` (QSortFilterProxyModel) | `QCollator`, numeric mode | no | LGPL-2.1 | medium: proxy model |
+| KDE file dialogs (KIO) | C++ / Qt 6 | `KDirSortFilterProxyModel` (QSortFilterProxyModel) re-sorts everything | `QCollator` | no | LGPL-2.0-only (`kdirsortfilterproxymodel.cpp`) | medium: Qt's proxy model owns the sort |
+| Krusader | C++ / Qt 6 | `KrSort::Sorter::sort()`: `std::stable_sort` | `QString::localeAwareCompare` on lowercased copies | no | GPL-2.0-or-later | medium-high: owns its sort |
+| PCManFM-Qt (libfm-qt) | C++ / Qt | `ProxyFolderModel` (QSortFilterProxyModel) | `QCollator`, numeric mode | no | LGPL-2.1-or-later | medium: proxy model |
 | **Nautilus** (GNOME Files) | C / GTK 4 | `GtkSortListModel` with a `GtkCustomSorter` re-sorts every item | cached `g_utf8_collate_key_for_filename` + strcmp | yes | GPL-3.0 (files GPL-2.0-or-later) | medium: GTK owns the sort; needs a custom `GListModel` or a GTK change |
-| **Thunar** (Xfce) | C / GTK 3 | `g_sequence_sort()` on its tree-view model | cached collate keys + strcmp | yes | GPL-2.0 | **high**: owns its sort, keys already exist |
-| **Nemo** (Cinnamon) | C / GTK 3 | `g_sequence_sort()` in `nemo-list-model.c` | cached collation keys | yes | GPL-2.0 | **high**: same as Thunar |
-| Caja (MATE) | C / GTK 3 | `g_sequence_sort()` in `fm-list-model.c` | cached collation keys | yes | GPL-2.0 | high: same as Nemo |
+| **Thunar** (Xfce) | C / GTK 3 | `g_sequence_sort()` on its tree-view model | cached collate keys + strcmp | yes | GPL-2.0-or-later | **high**: owns its sort, keys already exist |
+| **Nemo** (Cinnamon) | C / GTK 3 | `g_sequence_sort()` in `nemo-list-model.c` | cached collation keys | yes | GPL-2.0-or-later | **high**: same as Thunar |
+| Caja (MATE) | C / GTK 3 | `g_sequence_sort()` in `fm-list-model.c` | cached collation keys | yes | GPL-2.0-or-later | high: same as Nemo |
 | **yazi** | Rust (terminal) | `sort_unstable_by` over every entry (`yazi-fs/src/sorter.rs`) | own natural sort | no | MIT | medium-high: needs a Rust port; performance-minded project |
 | lf | Go (terminal) | `slices.SortStableFunc` (`nav.go`) | natural / plain | no | MIT | medium: needs a Go port |
 | nnn | C (terminal) | `qsort` with its own comparators | `xstrverscasecmp` | no | BSD-2-Clause | low-medium: tiny codebase, small folders |
@@ -40,7 +40,11 @@ The differences are in how expensive one comparison is:
 
 ## Measured on real stacks
 
-From `docs/bucketization/benchmarks.md` (real listings of 36k–98k entries):
+Every file manager above except Files (Windows) is now measured in its own
+sort code, with a verdict per project, in
+[cross-project-benchmarks.md](cross-project-benchmarks.md). The first,
+stack-level measurements from [benchmarks.md](benchmarks.md) (real listings
+of 36k–98k entries):
 
 | Stack | Full re-sort on a column click | Bucketization: switch + first page | Pre-sort per column (once) |
 |---|---|---|---|
@@ -54,6 +58,10 @@ version-numbered names; see benchmarks.md).
 
 ## Where to contribute, in order
 
+This was the first ranking, before the per-project measurements. The current
+plan, including bug reports and quick wins found on the way, is in
+[launch/README.md](launch/README.md).
+
 1. **Dolphin**: the largest gains, the stack the idea was designed for, and
    a C++ code base Bucketization already fits. Start with a benchmark-only
    merge request (`changeSortRole` in `kfileitemmodelbenchmark.cpp`), then a
@@ -65,8 +73,8 @@ version-numbered names; see benchmarks.md).
 2. **Thunar or Nemo**: they own their sort (`g_sequence_sort`) and already
    compute collation keys, so the integration is small and the pre-sort is
    nearly free. A C port (or a C wrapper of the C++ core) is needed. Both
-   are GPL-2.0, so the code must be offered under a GPL-2.0-compatible
-   license.
+   are GPL-2.0-or-later, so the code must be offered under a compatible
+   license (MIT or LGPL-2.1-or-later).
 3. **yazi**: a Rust port; the project is performance-focused, MIT-licensed
    and already has an agent-guidelines file (`AGENTS.md`), so AI-assisted
    work is not unusual there. A terminal shows one page at a time, which is
@@ -78,11 +86,14 @@ Nautilus and the QSortFilterProxyModel-based managers need deeper changes
 
 ## Licensing note
 
-The SpeedUp repository is AGPL-3.0. None of these projects can take AGPL
-code, and GPL-2.0-only projects (Thunar, Nemo, Caja) cannot take GPL-3.0 or
-AGPL code either. As the copyright holder you can additionally publish the
-Bucketization code under a compatible license, for example LGPL-2.1-or-later
-(works for all of the above) or MIT (works everywhere).
+The SpeedUp repository is AGPL-3.0. The file managers are GPL-2.0-or-later
+(Dolphin, Krusader, Thunar, Nemo, Caja; Nautilus is GPL-3.0-or-later with
+GPL-2.0-or-later files), LGPL (libfm-qt 2.1-or-later, KIO's file dialogs
+2.0-only), MIT (yazi, lf) or BSD-2-Clause (nnn). None of them will take AGPL
+code: it would turn their combined work into an AGPL one. As the copyright
+holder you can additionally publish the Bucketization code under a compatible
+license: MIT works for every project above, LGPL-2.1-or-later for all but the
+MIT ones. See [launch/README.md](launch/README.md).
 
 ## Source snapshots
 

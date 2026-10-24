@@ -24,8 +24,10 @@ other ports (Python, C#, Rust, Kotlin, ...) follow.
 Related documents:
 
 - [benchmarks.md](benchmarks.md): measured against Dolphin's and GNOME's real sorting code on real folders
+- [cross-project-benchmarks.md](cross-project-benchmarks.md): measured in the sort code of 10 more Linux file managers, with a verdict per project
 - [file-manager-survey.md](file-manager-survey.md): how 12 file managers sort today, and where Bucketization fits
 - [kde-contribution-plan.md](kde-contribution-plan.md): steps towards a Dolphin contribution
+- [launch/README.md](launch/README.md): the launch-day contribution plan and a ready kit per project
 
 > **Name.** The interface is called `Bucketization`. "Bucketisation" (British
 > spelling) is just as correct; the `-ize` form matches the conventions of
@@ -286,6 +288,9 @@ thread.
 Dolphin's own sorting code on Qt 6/ICU, and the GLib collation keys and
 `g_sequence_sort` used by Nautilus, Thunar, Nemo and Caja, on real
 directory listings (system folders, `node_modules`, the Linux kernel tree).
+[cross-project-benchmarks.md](cross-project-benchmarks.md) does the same in
+the sort paths of Thunar, Nemo, Caja, Nautilus (GTK 4), PCManFM-Qt, the KDE
+file dialogs, Krusader, nnn, yazi (Rust) and lf (Go).
 
 **Synthetic micro-benchmark:** `speedup_benchmark_bucketization` (C++) and `BucketizationBenchmark` (Java)
 use synthetic directories: a third camera-style names (`IMG_20…`), a third
