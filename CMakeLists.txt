@@ -8,6 +8,7 @@ option(SPEEDUP_ENABLE_CUDA "Enable CUDA backend" OFF)
 option(SPEEDUP_ENABLE_OPENCL "Enable OpenCL backend" ON)
 option(SPEEDUP_ENABLE_ASM "Enable ASM optimized paths" ON)
 option(SPEEDUP_BUILD_BENCHMARKS "Build benchmark targets" ON)
+option(SPEEDUP_BUILD_EXAMPLES "Build example programs" ON)
 
 if(SPEEDUP_ENABLE_ASM)
     find_program(NASM_EXECUTABLE nasm)
@@ -54,6 +55,25 @@ target_include_directories(speedup
 add_executable(speedup_smoke tests/unit/test_binary_search.c)
 target_link_libraries(speedup_smoke PRIVATE speedup)
 
+# Bucketization: header-only C++17 interface (include/speedup/bucketization.hpp)
+add_library(speedup_bucketization INTERFACE)
+add_library(speedup::bucketization ALIAS speedup_bucketization)
+target_include_directories(speedup_bucketization INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_compile_features(speedup_bucketization INTERFACE cxx_std_17)
+
+add_executable(speedup_bucketization_test tests/unit/test_bucketization.cpp)
+target_link_libraries(speedup_bucketization_test PRIVATE speedup_bucketization)
+
+if(SPEEDUP_BUILD_BENCHMARKS)
+    add_executable(speedup_benchmark_bucketization benchmarks/core/benchmark_bucketization.cpp)
+    target_link_libraries(speedup_benchmark_bucketization PRIVATE speedup_bucketization)
+endif()
+
+if(SPEEDUP_BUILD_EXAMPLES)
+    add_executable(speedup_example_file_browser examples/bucketization/file_browser.cpp)
+    target_link_libraries(speedup_example_file_browser PRIVATE speedup_bucketization)
+endif()
+
 if(WIN32 AND SPEEDUP_BUILD_BENCHMARKS AND SPEEDUP_ENABLE_ASM)
     enable_language(ASM_NASM)
 
@@ -69,3 +89,4 @@ endif()
 
 enable_testing()
 add_test(NAME speedup_smoke COMMAND speedup_smoke)
+add_test(NAME speedup_bucketization_test COMMAND speedup_bucketization_test)

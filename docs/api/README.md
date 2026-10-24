@@ -13,3 +13,4 @@ Primary documented headers:
 - `include/speedup/api.h`
 - `include/speedup/backend/dispatch.h`
 - `include/speedup/algorithms/binary_search.h`
+- `include/speedup/bucketization.hpp` and `include/speedup/bucketization/*.hpp`

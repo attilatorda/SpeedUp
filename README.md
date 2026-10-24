@@ -30,6 +30,30 @@ cmake --build build-shared --config Release
 
 If NASM is not installed, ASM paths are disabled automatically and C/C++ fallback remains available.
 
+## Bucketization: fast re-sorting by several keys
+
+`Bucketization` is an interface for collections that can be sorted in several
+ways (a file manager's name / size / modified / last-used columns). Every
+element picks a bucket per sort key once, when it is added. Switching the sort
+column then only regroups by bucket id, and only the bucket on screen gets
+sorted.
+
+- C++17, header-only: `include/speedup/bucketization.hpp` (CMake target `speedup::bucketization`)
+- Java 17: `bindings/java/bucketization/` (Maven)
+- Design and cross-language spec: `docs/bucketization/README.md`
+
+```cpp
+#include "speedup/bucketization.hpp"
+namespace bz = speedup::bucketization;
+
+bz::BucketIndex<File> files(bz::BucketPlan::defaults().with_page_size(40));
+files.add_sort_key(bz::SortKey<File>::of("name", &File::name));
+files.add_sort_key(bz::SortKey<File>::of("size", &File::size));
+files.add_all(listing);
+files.sort_by("size", bz::Direction::descending);   // O(n), no comparisons
+auto rows = files.first_page();                      // sorts ~40 elements
+```
+
 ## Minimal C usage
 ```c
 #include <stdint.h>
@@ -44,10 +68,11 @@ int main(void) {
 ```
 
 ## Current structure
-- `include/speedup`: public C API
+- `include/speedup`: public C API, plus header-only C++ components (`bucketization.hpp`)
 - `src`: core, algorithms, CPU/GPU backends
 - `codegen`: typed specialization pipeline
-- `bindings`: multi-language integration stubs
+- `bindings`: multi-language integration stubs, native Java modules (`bindings/java/bucketization`)
+- `examples`: example programs (`examples/bucketization/file_browser.cpp`)
 - `docs/tutorials/language-setup`: language onboarding guides
 - `ci/github/workflows`: CI skeleton
 - `legacy`: preserved original binary-search benchmark assets
@@ -63,6 +88,7 @@ int main(void) {
 
 ## Documentation index
 - Architecture: `docs/architecture/overview.md`
+- Bucketization design and cross-language spec: `docs/bucketization/README.md`
 - Benchmark analysis: `docs/papers/binary_search_results_analysis.md`
 - Benchmark methodology baseline: `BENCHMARKS.md`
 - API docs (Doxygen): `docs/api/README.md`
