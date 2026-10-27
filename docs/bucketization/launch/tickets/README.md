@@ -7,15 +7,16 @@ to SpeedUp, and each carries its evidence inline. All were re-checked on
 
 | Ticket | Project | Where to file | Kind | Status |
 |---|---|---|---|---|
-| [dolphin-natural-sort-cycle.md](dolphin-natural-sort-cycle.md) | Dolphin | bugs.kde.org, product dolphin | bug: non-transitive comparison (since 0d10eff3) | ready, not filed |
-| [krusader-descending-comparator.md](krusader-descending-comparator.md) | Krusader | bugs.kde.org, product krusader | bug: undefined behaviour in std::stable_sort (low severity) | ready, not filed |
-| [lf-normalize-per-comparison.md](lf-normalize-per-comparison.md) | lf | github.com/gokcehan/lf/issues | performance (4–8× on name sorting) | ready, not filed |
+| [dolphin-natural-sort-cycle.md](dolphin-natural-sort-cycle.md) | Dolphin | bugs.kde.org, product dolphin | bug: non-transitive comparison (since 0d10eff3) | filed 2026-10-27 (link to add) |
+| [krusader-descending-comparator.md](krusader-descending-comparator.md) | Krusader | bugs.kde.org, product krusader | bug: undefined behaviour in std::stable_sort (low severity) | filed 2026-10-27 (link to add) |
+| [lf-normalize-per-comparison.md](lf-normalize-per-comparison.md) | lf | github.com/gokcehan/lf/issues, "Bug report" form | performance (4–8× on name sorting) | ready, not filed; run [lf-sort-benchmark_test.go](lf-sort-benchmark_test.go) first (re-checked on master 78f781b, 2026-10-27) |
 
 They could not be filed from the session that prepared them. bugs.kde.org is
 not reachable from it, and it has no GitHub access outside the SpeedUp
 repository. File them from your own accounts. Each file starts with notes for
 you: where to file, what to search for first and, for bugs.kde.org, what to
-pick in each field of the form. The text to paste follows the `---` line:
+pick in each field of the form (bugs.kde.org for Dolphin and Krusader,
+lf's GitHub issue form for lf). The text to paste follows the `---` line:
 **Summary** goes into the one-line Summary field, **Description** replaces
 the template text in the Description box.
 
