@@ -4,7 +4,7 @@ All notable changes to SpeedUp. Versions follow
 [Semantic Versioning](https://semver.org/); while the major version is 0,
 a new minor version may change APIs.
 
-## [0.2.0] - unreleased
+## [0.2.0] - 2026-10-27
 
 Bucketization: fast re-sorting of collections that can be ordered in
 several ways, such as a file manager's name, size and date columns. A

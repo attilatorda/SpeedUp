@@ -33,15 +33,23 @@ Ready:
 - [x] launch day no longer depends on the bug tickets (filed 2026-10-27);
       following them up is in [TODO.md](TODO.md)
 
-Still yours to decide or do, in this order (details in
-[Before launch day](#before-launch-day-t-7-to-t-1)):
+Done on 2026-10-27:
 
-1. **Merge** the branch into `main` (planned for 2026-10-27).
-2. **Pick the release date:** the day you make the repository public and
-   publish the release. It goes into the commands in the
-   [runbook](#runbook-commands).
-3. **On the day:** re-check the AI policies and search each tracker for
-   duplicates.
+- [x] release date set to **2026-10-27**: `CITATION.cff` at the repository
+      root and the 0.2.0 heading in [CHANGELOG.md](../../../CHANGELOG.md)
+- [x] the branch merged into `main` (pull request)
+
+Still yours, in this order (these need your GitHub account, the KDE, GNOME
+and Xfce accounts, or the repository settings):
+
+1. **Tags:** `v0.1.0` on commit `a6e6d06` (the binary-search release) and
+   `v0.2.0` on the merged `main`.
+2. **Repository public**, then publish the GitHub release `v0.2.0` with the
+   release notes from `out/announcement.md`.
+3. **Software Heritage:** save the repository and note the SWHID.
+4. **Posts:** re-check the AI policies, search each tracker for duplicates,
+   then post from `out/projects/` in the [order below](#order-of-posting-on-launch-day).
+   The three bug tickets are separate ([TODO.md](TODO.md)).
 
 Decided:
 
@@ -218,8 +226,9 @@ spam.
 
 ## Runbook (commands)
 
-The work lives on the branch `claude/bucketisation-sorting-interface-xjfpek`.
-Merge it into `main` first (pull request), then:
+The branch `claude/bucketisation-sorting-interface-xjfpek` was merged into
+`main` on 2026-10-27, together with `CITATION.cff` and the changelog date, so
+the first block below is already done except for the tags:
 
 ```bash
 # T-1: numbers and placeholders (use the date you will release on; the tag is v0.2.0)
