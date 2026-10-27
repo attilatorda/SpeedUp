@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(SpeedUp VERSION 0.1.0 LANGUAGES C CXX)
+project(SpeedUp VERSION 0.2.0 LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
@@ -8,6 +8,7 @@ option(SPEEDUP_ENABLE_CUDA "Enable CUDA backend" OFF)
 option(SPEEDUP_ENABLE_OPENCL "Enable OpenCL backend" ON)
 option(SPEEDUP_ENABLE_ASM "Enable ASM optimized paths" ON)
 option(SPEEDUP_BUILD_BENCHMARKS "Build benchmark targets" ON)
+option(SPEEDUP_BUILD_EXAMPLES "Build example programs" ON)
 
 if(SPEEDUP_ENABLE_ASM)
     find_program(NASM_EXECUTABLE nasm)
@@ -54,6 +55,75 @@ target_include_directories(speedup
 add_executable(speedup_smoke tests/unit/test_binary_search.c)
 target_link_libraries(speedup_smoke PRIVATE speedup)
 
+# Bucketization: header-only C++17 interface (include/speedup/bucketization.hpp)
+add_library(speedup_bucketization INTERFACE)
+add_library(speedup::bucketization ALIAS speedup_bucketization)
+target_include_directories(speedup_bucketization INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_compile_features(speedup_bucketization INTERFACE cxx_std_17)
+
+add_executable(speedup_bucketization_test tests/unit/test_bucketization.cpp)
+target_link_libraries(speedup_bucketization_test PRIVATE speedup_bucketization)
+
+if(SPEEDUP_BUILD_BENCHMARKS)
+    add_executable(speedup_benchmark_bucketization benchmarks/core/benchmark_bucketization.cpp)
+    target_link_libraries(speedup_benchmark_bucketization PRIVATE speedup_bucketization)
+
+    # Bucketization against real file manager stacks (optional dependencies).
+    # KDE Dolphin: Qt 6 QCollator on ICU, Dolphin's comparison and parallel merge sort.
+    find_package(Qt6 QUIET COMPONENTS Core Concurrent)
+    find_package(ICU QUIET COMPONENTS uc i18n)
+    if(Qt6_FOUND AND ICU_FOUND)
+        add_executable(speedup_benchmark_dolphin_stack benchmarks/kde_stack/benchmark_dolphin_stack.cpp)
+        target_link_libraries(speedup_benchmark_dolphin_stack PRIVATE
+            speedup_bucketization Qt6::Core Qt6::Concurrent ICU::uc ICU::i18n)
+        add_executable(speedup_verify_icu_key benchmarks/kde_stack/verify_icu_key.cpp)
+        target_link_libraries(speedup_verify_icu_key PRIVATE Qt6::Core Qt6::Concurrent ICU::uc ICU::i18n)
+        add_executable(speedup_find_comparator_cycles benchmarks/kde_stack/find_comparator_cycles.cpp)
+        target_link_libraries(speedup_find_comparator_cycles PRIVATE Qt6::Core Qt6::Concurrent)
+        # PCManFM-Qt, KDE file dialogs (KIO) and Krusader on their own sort paths.
+        add_executable(speedup_benchmark_qt_family benchmarks/qt_stack/benchmark_qt_family.cpp)
+        target_link_libraries(speedup_benchmark_qt_family PRIVATE speedup_bucketization Qt6::Core ICU::uc ICU::i18n)
+        add_executable(speedup_krusader_descending_check benchmarks/qt_stack/krusader_descending_check.cpp)
+        target_compile_definitions(speedup_krusader_descending_check PRIVATE _GLIBCXX_DEBUG)
+        target_link_libraries(speedup_krusader_descending_check PRIVATE Qt6::Core)
+    else()
+        message(STATUS "Qt 6 or ICU not found: skipping speedup_benchmark_dolphin_stack")
+    endif()
+    # GNOME family (Nautilus, Thunar, Nemo, Caja): GLib collation keys and GSequence.
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(GLIB QUIET IMPORTED_TARGET glib-2.0)
+    endif()
+    if(GLIB_FOUND)
+        add_executable(speedup_benchmark_glib_stack benchmarks/gnome_stack/benchmark_glib_stack.cpp)
+        target_link_libraries(speedup_benchmark_glib_stack PRIVATE speedup_bucketization PkgConfig::GLIB)
+        # Thunar, Nemo, Caja on their g_sequence_sort paths; Nautilus on GTK 4 when available.
+        add_executable(speedup_benchmark_gnome_family benchmarks/gnome_stack/benchmark_gnome_family.cpp)
+        target_link_libraries(speedup_benchmark_gnome_family PRIVATE speedup_bucketization PkgConfig::GLIB)
+        pkg_check_modules(GTK4 QUIET IMPORTED_TARGET gtk4)
+        if(GTK4_FOUND)
+            target_compile_definitions(speedup_benchmark_gnome_family PRIVATE SPEEDUP_HAVE_GTK4)
+            target_link_libraries(speedup_benchmark_gnome_family PRIVATE PkgConfig::GTK4)
+        else()
+            message(STATUS "GTK 4 not found: speedup_benchmark_gnome_family runs without Nautilus")
+        endif()
+    else()
+        message(STATUS "GLib not found: skipping speedup_benchmark_glib_stack")
+    endif()
+    # nnn, and C++ ports of yazi's and lf's comparisons (their native sorts:
+    # benchmarks/terminal_stack/yazi_bench (Rust) and lf_bench (Go)).
+    add_executable(speedup_benchmark_terminal_family benchmarks/terminal_stack/benchmark_terminal_family.cpp)
+    target_link_libraries(speedup_benchmark_terminal_family PRIVATE speedup_bucketization)
+    # Godot editor's FileSystem dock sort (sort_file_info_list), extracted.
+    add_executable(speedup_benchmark_godot benchmarks/godot_stack/benchmark_godot.cpp)
+    target_link_libraries(speedup_benchmark_godot PRIVATE speedup_bucketization)
+endif()
+
+if(SPEEDUP_BUILD_EXAMPLES)
+    add_executable(speedup_example_file_browser examples/bucketization/file_browser.cpp)
+    target_link_libraries(speedup_example_file_browser PRIVATE speedup_bucketization)
+endif()
+
 if(WIN32 AND SPEEDUP_BUILD_BENCHMARKS AND SPEEDUP_ENABLE_ASM)
     enable_language(ASM_NASM)
 
@@ -69,3 +139,4 @@ endif()
 
 enable_testing()
 add_test(NAME speedup_smoke COMMAND speedup_smoke)
+add_test(NAME speedup_bucketization_test COMMAND speedup_bucketization_test)

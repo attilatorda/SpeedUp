@@ -30,6 +30,34 @@ cmake --build build-shared --config Release
 
 If NASM is not installed, ASM paths are disabled automatically and C/C++ fallback remains available.
 
+## Bucketization: fast re-sorting by several keys
+
+Bucketization is a design for collections that can be sorted in several
+ways (a file manager's name / size / modified / last-used columns); its
+interface is `BucketedList<T>`, implemented by `BucketIndex<T>`. Every
+element picks a bucket per sort key once, when it is added. Switching the sort
+column then only regroups by bucket id, and only the bucket on screen gets
+sorted.
+
+- C++17, header-only: `include/speedup/bucketization.hpp` (CMake target `speedup::bucketization`)
+- Java 17: `bindings/java/bucketization/` (Maven)
+- Design and cross-language spec: `docs/bucketization/README.md`
+- License: AGPL-3.0, like the rest of SpeedUp, with an exception that lets the
+  file managers it was benchmarked against (and their libraries) use it under
+  their own licenses: [LICENSE-EXCEPTION-Bucketization.md](LICENSE-EXCEPTION-Bucketization.md)
+
+```cpp
+#include "speedup/bucketization.hpp"
+namespace bz = speedup::bucketization;
+
+bz::BucketIndex<File> files(bz::BucketPlan::defaults().with_page_size(40));
+files.add_sort_key(bz::SortKey<File>::of("name", &File::name));
+files.add_sort_key(bz::SortKey<File>::of("size", &File::size));
+files.add_all(listing);
+files.sort_by("size", bz::Direction::descending);   // O(n), no comparisons
+auto rows = files.first_page();                      // sorts ~40 elements
+```
+
 ## Minimal C usage
 ```c
 #include <stdint.h>
@@ -44,10 +72,11 @@ int main(void) {
 ```
 
 ## Current structure
-- `include/speedup`: public C API
+- `include/speedup`: public C API, plus header-only C++ components (`bucketization.hpp`)
 - `src`: core, algorithms, CPU/GPU backends
 - `codegen`: typed specialization pipeline
-- `bindings`: multi-language integration stubs
+- `bindings`: multi-language integration stubs, native Java modules (`bindings/java/bucketization`)
+- `examples`: example programs (`examples/bucketization/file_browser.cpp`)
 - `docs/tutorials/language-setup`: language onboarding guides
 - `ci/github/workflows`: CI skeleton
 - `legacy`: preserved original binary-search benchmark assets
@@ -63,6 +92,12 @@ int main(void) {
 
 ## Documentation index
 - Architecture: `docs/architecture/overview.md`
+- Bucketization design and cross-language spec: `docs/bucketization/README.md`
+- Bucketization benchmarks against real file manager stacks (Dolphin, GNOME family): `docs/bucketization/benchmarks.md`
+- Bucketization in the sort code of 10 more file managers (GNOME family, Qt, terminal) and the Godot editor: `docs/bucketization/cross-project-benchmarks.md`
+- How file managers sort today, and where to contribute: `docs/bucketization/file-manager-survey.md`
+- Launch-day contribution plan and per-project kits: `docs/bucketization/launch/README.md`
+- Plan for contributing to KDE Dolphin: `docs/bucketization/kde-contribution-plan.md`
 - Benchmark analysis: `docs/papers/binary_search_results_analysis.md`
 - Benchmark methodology baseline: `BENCHMARKS.md`
 - API docs (Doxygen): `docs/api/README.md`

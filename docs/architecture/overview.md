@@ -2,6 +2,11 @@
 
 Dispatch order: CUDA -> OpenCL -> CPU optimized -> C fallback.
 
+Components:
+- Algorithms behind the C ABI with backend dispatch (binary search).
+- Header-only C++ / native Java components that call user code, such as
+  Bucketization (`docs/bucketization/README.md`).
+
 Tuning surfaces:
 - compile-time defaults via CMake
 - runtime hints via C API (threads/cache/backend preference)

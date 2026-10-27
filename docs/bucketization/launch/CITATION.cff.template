@@ -1,0 +1,28 @@
+# Copy to the repository root as CITATION.cff after filling in the <...> fields
+# (fill_placeholders.py does the substitution). GitHub then shows "Cite this
+# repository" with this text. Validate with: pip install cffconvert && cffconvert --validate
+cff-version: 1.2.0
+message: "If you use or build on Bucketization, please cite it as below."
+title: "Bucketization: fast re-sorting of multi-column views by per-key bucket assignment"
+type: software
+authors:
+  - given-names: "<GIVEN_NAMES>"
+    family-names: "<FAMILY_NAMES>"
+repository-code: "<REPO_URL>"
+url: "<DESIGN_DOC_URL>"
+version: "<RELEASE_TAG>"
+date-released: "<RELEASE_DATE>"
+license: AGPL-3.0-only
+keywords:
+  - sorting
+  - bucket sort
+  - file manager
+  - multi-key sort
+  - incremental sorting
+abstract: >-
+  Bucketization keeps, for every sort key of a collection (for example name,
+  size and modification time in a file manager), a bucket assignment per
+  element, with page-sized buckets at both ends. Switching the sort key or
+  direction regroups the elements in linear time and sorts only the buckets
+  that are on screen; groupings are cached per key, and groups keep folders
+  first in both directions.
