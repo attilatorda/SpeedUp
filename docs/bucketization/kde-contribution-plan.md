@@ -17,10 +17,11 @@ work is useful even if a later step is not accepted. Numbers come from
   is the design for multi-column views: every item keeps a bucket per column,
   page-sized buckets at both ends, lazy per-bucket sorting with cached
   groupings per column, and groups for folders-first in both directions.
-- **License.** SpeedUp is AGPL-3.0, which KDE cannot accept. Code you bring to
-  Dolphin must be GPL-2.0-or-later (or another license on KDE's accepted
-  list); as the copyright holder you can offer the Bucketization code under
-  such a license as well.
+- **License.** SpeedUp is AGPL-3.0, which KDE cannot accept on its own. Code
+  you bring to Dolphin must be GPL-2.0-or-later (or another license on KDE's
+  accepted list). The
+  [license exception](../../LICENSE-EXCEPTION-Bucketization.md) allows exactly
+  that for Dolphin, KIO and Krusader.
 - **AI assistance.** This implementation was written with an AI assistant.
   Check KDE's current policy on AI-assisted contributions and disclose it.
   The Dolphin patches need Qt/KDE style anyway, so writing them yourself from

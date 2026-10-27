@@ -78,7 +78,7 @@ of every project fits.
 
 ### Verdict per project
 
-| Project | Gain on big folders | Integration effort | License fit (with Bucketization under MIT) | First contribution | Verdict |
+| Project | Gain on big folders | Integration effort | License fit (with the [license exception](../../LICENSE-EXCEPTION-Bucketization.md)) | First contribution | Verdict |
 |---|---|---|---|---|---|
 | **Dolphin** | very large | medium: `KFileItemModel` owns the sort; its bookkeeping needs a lazy path | yes | bug report (natural-sort cycles), then a benchmark MR | **contribute first** |
 | **Krusader** | very large | low: owns `std::stable_sort` in `ListModel::sort()` | yes | bug report: descending comparator is not a strict weak ordering | **contribute** |

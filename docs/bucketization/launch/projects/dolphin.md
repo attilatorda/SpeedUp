@@ -4,7 +4,7 @@
 |---|---|
 | Where | bug: <https://bugs.kde.org> (product *dolphin*, component *view-engine: general*); code: <https://invent.kde.org/system/dolphin>; discussion: the KDE Discuss post in [kde-discuss.md](kde-discuss.md) |
 | Account | KDE Identity (invent.kde.org) and a bugs.kde.org account (separate signup) |
-| License | GPL-2.0-or-later. Bucketization under MIT fits |
+| License | GPL-2.0-or-later. The [Bucketization exception](../../../../LICENSE-EXCEPTION-Bucketization.md) lets it use the code under its own license |
 | AI policy (2026-10-24) | KDE has no adopted policy. The draft under discussion (September 2026) allows AI-assisted code under human review, lets maintainers close "obvious and lazy" LLM contributions, and asks you to write commit messages and merge request descriptions yourself. **Disclose; write the bug report and MR text yourself** |
 | Fit | **highest**: the largest measured gains, and the stack the design was made for |
 | First post | the KDE Discuss post on launch day. The bug report was filed on 2026-10-27 and is not part of the launch ([../TODO.md](../TODO.md)) |

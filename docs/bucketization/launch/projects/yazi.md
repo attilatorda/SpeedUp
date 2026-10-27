@@ -4,7 +4,7 @@
 |---|---|
 | Where | <https://github.com/sxyazi/yazi/issues/new?template=feature.yml> (feature request). Search issues and discussions first for "sort" and "performance" |
 | Account | GitHub |
-| License | MIT. Bucketization under MIT fits; a Rust port would be MIT, under your copyright |
+| License | MIT. The [Bucketization exception](../../../../LICENSE-EXCEPTION-Bucketization.md) lets it use the code under its own license; it covers a Rust port too |
 | AI policy (2026-10-24) | [Yazi AI Policy](https://github.com/yazi-rs/.github/blob/main/AI_POLICY.md):<br>• AI use is allowed but must be disclosed, **with the model used and the extent of help**;<br>• **issue, PR, discussion and commit text must be written by a human**, and must not read as AI-written;<br>• a maintainer must approve the design in an issue **before** a PR;<br>• AI-generated code must be reviewed, tested and simplified by a human;<br>• the AI tools used must not claim copyright.<br>yazi's `AGENTS.md` also forbids agents from opening issues or PRs |
 | Fit | medium. yazi already sorts fast (Rust, no allocation per comparison), so the absolute gain shows only in big folders. The project cares about performance |
 | First post | a feature request **you write yourself**. Below are the facts to use, not a text to paste |

@@ -16,7 +16,7 @@ it fails both of the plan's drop rules (see [../README.md](../README.md#drop-rul
 | | |
 |---|---|
 | Where (later) | proposals: <https://github.com/godotengine/godot-proposals> (feature proposals are not accepted on the main issue tracker) |
-| License | MIT. Bucketization under MIT fits |
+| License | MIT. The [Bucketization exception](../../../../LICENSE-EXCEPTION-Bucketization.md) lets it use the code under its own license |
 | AI policy (checked 2026-10-24, contributing docs `5170f49`) | "Do not use AI to generate substantial pieces of code"; "Do not use AI-generated text in human-to-human communication"; "Do not use AI to generate user-facing media (e.g. documentation…)"; AI use that is allowed (for example code completion) must be disclosed. New contributors need maintainer approval before larger features |
 | What runs on a sort change | `FileSystemDock::_update_file_list()` rebuilds a `List<FileInfo>` of the folder's files from `EditorFileSystem` (already in name order), calls `sort_file_info_list()` (a linked-list merge sort with a sorted-prefix check), then refills the `ItemList` |
 

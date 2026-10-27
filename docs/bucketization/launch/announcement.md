@@ -46,12 +46,14 @@ after a column click:
 In every case Bucketization's order is sorted under the file manager's own
 comparison function. Along the way the benchmarks found a non-transitive
 natural sort in Dolphin and a comparator that is not a strict weak ordering in
-Krusader. Both are being reported upstream.
+Krusader. Both have been reported upstream.
 
 <DOI_LINE>
 
-License: AGPL-3.0 (see the repository for other licensing of the
-Bucketization sources). Parts of the implementation were written with an AI
+License: AGPL-3.0, with an exception that lets Dolphin, KIO, Krusader,
+Thunar, Nemo, Caja, Nautilus, GLib, GTK, PCManFM-Qt, libfm-qt, yazi, lf, nnn
+and Godot use the Bucketization code under their own licenses
+(`LICENSE-EXCEPTION-Bucketization.md`). Parts of the implementation were written with an AI
 coding assistant; the design, the direction of the work and the review are the
 author's.
 

@@ -73,8 +73,7 @@ plan, including bug reports and quick wins found on the way, is in
 2. **Thunar or Nemo**: they own their sort (`g_sequence_sort`) and already
    compute collation keys, so the integration is small and the pre-sort is
    nearly free. A C port (or a C wrapper of the C++ core) is needed. Both
-   are GPL-2.0-or-later, so the code must be offered under a compatible
-   license (MIT or LGPL-2.1-or-later).
+   are GPL-2.0-or-later; the license exception covers them.
 3. **yazi**: a Rust port; the project is performance-focused, MIT-licensed
    and already has an agent-guidelines file (`AGENTS.md`), so AI-assisted
    work is not unusual there. A terminal shows one page at a time, which is
@@ -90,10 +89,10 @@ The SpeedUp repository is AGPL-3.0. The file managers are GPL-2.0-or-later
 (Dolphin, Krusader, Thunar, Nemo, Caja; Nautilus is GPL-3.0-or-later with
 GPL-2.0-or-later files), LGPL (libfm-qt 2.1-or-later, KIO's file dialogs
 2.0-only), MIT (yazi, lf) or BSD-2-Clause (nnn). None of them will take AGPL
-code: it would turn their combined work into an AGPL one. As the copyright
-holder you can additionally publish the Bucketization code under a compatible
-license: MIT works for every project above, LGPL-2.1-or-later for all but the
-MIT ones. See [launch/README.md](launch/README.md).
+code: it would turn their combined work into an AGPL one. So SpeedUp adds an
+exception for them: each of these projects may use the Bucketization code, and
+ports of it, under its own license
+([LICENSE-EXCEPTION-Bucketization.md](../../LICENSE-EXCEPTION-Bucketization.md)).
 
 ## Source snapshots
 

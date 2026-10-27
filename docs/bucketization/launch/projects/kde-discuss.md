@@ -4,7 +4,7 @@
 |---|---|
 | Where | <https://discuss.kde.org>, category *Development* (or the Dolphin Matrix room #dolphin:kde.org for a lighter first contact) |
 | Account | KDE Identity |
-| License | Dolphin and Krusader GPL-2.0-or-later; KIO's `kdirsortfilterproxymodel.cpp` LGPL-2.0-only. Bucketization under MIT fits all three |
+| License | Dolphin and Krusader GPL-2.0-or-later; KIO's `kdirsortfilterproxymodel.cpp` LGPL-2.0-only. The [Bucketization exception](../../../../LICENSE-EXCEPTION-Bucketization.md) covers all three |
 | AI policy (2026-10-24) | no adopted KDE-wide policy; the draft allows AI-assisted code under human review and asks for self-written commit messages and MR descriptions. **Write this post yourself; the draft is the facts** |
 | When | first launch-day post (T0 + 30 min). It doesn't depend on the bug tickets |
 

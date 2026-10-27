@@ -4,7 +4,7 @@
 |---|---|
 | Where | <https://github.com/jarun/nnn/discussions> (ideas). nnn's maintainer keeps the program small and is selective about features |
 | Account | GitHub |
-| License | BSD-2-Clause. Bucketization under MIT fits; a C port would be MIT, under your copyright |
+| License | BSD-2-Clause. The [Bucketization exception](../../../../LICENSE-EXCEPTION-Bucketization.md) lets it use the code under its own license; it covers a C port too |
 | AI policy (2026-10-24) | none found. Disclose anyway |
 | Fit | **low**. The gains are real for big folders, but nnn values a tiny codebase, and typical folders already sort in under 1 ms. Post only if you have time; it is not needed for priority |
 | First post | optional discussion with numbers |
@@ -48,7 +48,7 @@ first). The pre-sort is high for names because the name key needs
 > Under a few thousand entries there's nothing to gain, so I understand if
 > this doesn't fit nnn's goals. For huge directories, a sort change would
 > regroup the entries in O(n) and sort only the visible rows. It would need
-> a small C port (MIT). Is this something you'd consider at all?
+> a small C port, which nnn could take under BSD-2-Clause. Is this something you'd consider at all?
 > Benchmarks: <CROSS_PROJECT_URL>
 >
 > (Disclosure: the benchmark harness and the C++/Java reference

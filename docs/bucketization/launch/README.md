@@ -36,15 +36,21 @@ Ready:
 Still yours to decide or do, in this order (details in
 [Before launch day](#before-launch-day-t-7-to-t-1)):
 
-1. **License:** add MIT (or LGPL) for the Bucketization sources. The posts
-   offer code to GPL, LGPL and MIT projects, which can't take AGPL-3.0. Then
-   change `license:` in [CITATION.cff.template](CITATION.cff.template) to
-   match.
-2. **Patent decision**, before anything is public (see the note below).
-3. **Tag and date** for the release, then the [runbook](#runbook-commands):
-   merge the branch into `main`, fill the placeholders, tag, release.
-4. **On the day:** re-check the AI policies and search each tracker for
+1. **Merge** the branch into `main` (planned for 2026-10-27).
+2. **Pick a version number and a release date.** The version number (the
+   "tag", for example `v0.2.0`) names the release on GitHub; the date is the
+   day you make the repository public and publish it. Both go into the
+   commands in the [runbook](#runbook-commands).
+3. **On the day:** re-check the AI policies and search each tracker for
    duplicates.
+
+Decided:
+
+- [x] **License:** SpeedUp stays AGPL-3.0. The
+      [license exception](../../../LICENSE-EXCEPTION-Bucketization.md) lets
+      every project in this plan (and the libraries its sort lives in) use
+      the Bucketization code, and ports of it, under its own license.
+- [x] **No patents** (2026-10-27).
 
 ## What a same-day launch does and does not give you
 
@@ -68,23 +74,14 @@ Still yours to decide or do, in this order (details in
 - **It is credit, not control.** Publishing gives you authorship credit and
   makes the design prior art. Anyone may implement the idea. Copyright covers
   your code, not the algorithm.
-- **Patents:** if you might ever want one, talk to a patent attorney
-  *before* the public release, and keep the repository private until then.
-  - In Europe, any public disclosure before filing destroys novelty; there is
-    no general grace period.
-  - The US, Canada, Japan, Korea and Australia give the inventor 12 months
-    after their own disclosure.
-
-  The release, the tickets that mention Bucketization and the launch-day
-  archiving (Software Heritage, Zenodo) all count as disclosure. The bug
-  tickets in [tickets/](tickets/) don't describe the design, so they don't.
-  For an open-source path this usually does not matter, but the release
-  makes the choice for you.
+- **No patents** (decided 2026-10-27). The release then works as a
+  defensive publication: once it is public and archived, nobody else can
+  patent what it discloses.
 - **How credit carries into each project:**
   - you author the commits from your own account, under your name;
   - every issue and merge request links the design doc;
-  - the copyright notice stays in any code you contribute, which both MIT and
-    LGPL require.
+  - the copyright notice stays in any code you contribute, which the license
+    exception requires.
 
 ## Where it pays off
 
@@ -179,17 +176,13 @@ spam.
 
 ## Before launch day (T-7 to T-1)
 
-- [ ] **License for the Bucketization sources.** SpeedUp is AGPL-3.0, which
-      none of these projects can take. As the copyright holder, additionally
-      license `include/speedup/bucketization*`,
-      `bindings/java/bucketization` and the future ports under:
-  - **MIT (recommended):** it fits every project here, whether GPL-2.0-or-later,
-    LGPL, MIT or BSD. It keeps your copyright notice in every copy. It also
-    allows proprietary use.
-  - **LGPL-2.1-or-later:** fits the GPL and LGPL projects, but yazi and lf
-    (MIT) would not take it.
-
-  Add SPDX headers and a note in the README. The kits assume this is done.
+- [x] **License for the Bucketization sources:** done. SpeedUp stays
+      AGPL-3.0, and
+      [LICENSE-EXCEPTION-Bucketization.md](../../../LICENSE-EXCEPTION-Bucketization.md)
+      lets each project in this plan use the code and its ports under its
+      own license. In code you contribute, keep the line
+      "Copyright (C) 2026 Attila Torda" and, if you like, "Based on
+      Bucketization, https://github.com/attilatorda/SpeedUp".
 - [ ] **Accounts** (with 2FA, under the name you want credited):
   - KDE Identity, for invent.kde.org and bugs.kde.org (separate signups);
   - gitlab.gnome.org;

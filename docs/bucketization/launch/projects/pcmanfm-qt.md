@@ -4,7 +4,7 @@
 |---|---|
 | Where | <https://github.com/lxqt/libfm-qt/issues> (the sort is in libfm-qt). Search first for "sort" and "slow" |
 | Account | GitHub |
-| License | LGPL-2.1-or-later. Bucketization under MIT fits |
+| License | LGPL-2.1-or-later. The [Bucketization exception](../../../../LICENSE-EXCEPTION-Bucketization.md) lets it use the code under its own license |
 | AI policy (2026-10-24) | none found in the repository. Disclose anyway |
 | Fit | medium-high. The gains are large: its name comparison is the most expensive one measured. But `QSortFilterProxyModel` owns the sort, so Bucketization needs a custom proxy model |
 | First post | issue: numbers, plus a cheap first fix (cached sort keys) and the larger proposal |
@@ -67,7 +67,8 @@ A name sort of a 100k-entry folder takes over a second. Each comparison:
 > Small folders gain nothing visible for the non-name columns. Name sorting
 > is already 4–5 ms at 1,500 files.
 >
-> Disclosure: the reference implementation (C++/Java, MIT) and the
+> Disclosure: the reference implementation (C++/Java; libfm-qt may use it
+> under LGPL-2.1-or-later) and the
 > benchmarks were written with an AI coding assistant under my direction and
 > review. The design is mine.
 

@@ -4,7 +4,7 @@
 |---|---|
 | Where | <https://gitlab.xfce.org/xfce/thunar/-/issues> (search first for "sort" and "large folder") |
 | Account | gitlab.xfce.org. Create it a few days early: new accounts can need approval |
-| License | GPL-2.0-or-later. Bucketization under MIT (or LGPL-2.1-or-later) fits |
+| License | GPL-2.0-or-later. The [Bucketization exception](../../../../LICENSE-EXCEPTION-Bucketization.md) lets it use the code under its own license |
 | AI policy (2026-10-24) | Xfce's AI/LLM policy (developer docs, August 2026): AI-assisted material is accepted **if it is disclosed in every merge request and issue**; contributors stay responsible for accuracy, legality and quality; you accept the policy when you join Xfce's GitLab. The post below discloses; do the same in every merge request |
 | Fit | **high**. Thunar owns its sort (`_thunar_tree_view_model_sort()`) and already caches collation keys, so the name key is free |
 | First post | issue: proposal with numbers and the one integration question |
@@ -71,7 +71,8 @@ re-sort excludes GtkTreeView's own work on rows-reordered.
 >
 > Small folders gain nothing visible (both stay under a millisecond). If
 > this is welcome I'd do the work in C, in Thunar's style. The reference
-> implementation is C++/Java under MIT, so a small C port comes first.
+> implementation is C++/Java (with a license exception for Thunar),
+> so a small C port comes first.
 >
 > Disclosure: the reference implementation and the benchmark harness were
 > written with an AI coding assistant, under my direction and review. The

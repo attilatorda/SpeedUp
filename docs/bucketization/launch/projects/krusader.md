@@ -4,7 +4,7 @@
 |---|---|
 | Where | bug: <https://bugs.kde.org> (product *krusader*); code: <https://invent.kde.org/utilities/krusader> |
 | Account | KDE Identity and bugs.kde.org (same as Dolphin) |
-| License | GPL-2.0-or-later. Bucketization under MIT fits |
+| License | GPL-2.0-or-later. The [Bucketization exception](../../../../LICENSE-EXCEPTION-Bucketization.md) lets it use the code under its own license |
 | AI policy (2026-10-24) | as for KDE in general (see [dolphin.md](dolphin.md)). Disclose |
 | Fit | high. Krusader owns its sort (`KrSort::Sorter`), and its comparison is expensive (`localeAwareCompare` on lowercased copies of the names) |
 | First post | the KDE Discuss post on launch day (performance). The bug report was filed on 2026-10-27 and is not part of the launch ([../TODO.md](../TODO.md)) |

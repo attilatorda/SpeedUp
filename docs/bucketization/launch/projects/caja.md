@@ -4,7 +4,7 @@
 |---|---|
 | Where | <https://github.com/mate-desktop/caja/issues> (search first for "sort") |
 | Account | GitHub |
-| License | GPL-2.0-or-later. Bucketization under MIT (or LGPL-2.1-or-later) fits |
+| License | GPL-2.0-or-later. The [Bucketization exception](../../../../LICENSE-EXCEPTION-Bucketization.md) lets it use the code under its own license |
 | AI policy (2026-10-24) | none found (`HACKING`, web). Disclose anyway |
 | Fit | **high**, same code structure as Nemo (`fm_list_model_sort_file_entries()`) |
 | First post | issue: proposal with numbers |
@@ -65,7 +65,8 @@ Ranges cover name, size and modified, ascending and descending.
 > when idle. Is that acceptable for Caja?
 >
 > Small folders won't change visibly. I'd be glad to do the C work. The
-> reference implementation is C++/Java under MIT.
+> reference implementation is C++/Java, and its license
+> exception lets Caja use it under its own license.
 >
 > Disclosure: the reference implementation and benchmarks were written with
 > an AI coding assistant under my direction and review. The design is mine.

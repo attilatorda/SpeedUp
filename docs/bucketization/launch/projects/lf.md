@@ -4,7 +4,7 @@
 |---|---|
 | Where | <https://github.com/gokcehan/lf/issues> (search first for "sort", "slow" and "natural") |
 | Account | GitHub |
-| License | MIT. Bucketization under MIT fits; a Go port would be MIT, under your copyright |
+| License | MIT. The [Bucketization exception](../../../../LICENSE-EXCEPTION-Bucketization.md) lets it use the code under its own license; it covers a Go port too |
 | AI policy (2026-10-24) | none found in the repository (`CONTRIBUTING.md`). Disclose anyway |
 | Fit | **high for a first contribution**: lf's default name sort spends most of its time normalizing names on every comparison. A small, self-contained change makes it 4–8× faster with identical order. Bucketization is the step after that |
 | First post | **none on launch day.** The normalization issue was filed on 2026-10-27 without mentioning Bucketization ([../tickets/lf-normalize-per-comparison.md](../tickets/lf-normalize-per-comparison.md)); following it up is in [../TODO.md](../TODO.md). A separate Bucketization issue later, if wanted |

@@ -4,7 +4,7 @@
 |---|---|
 | Where | <https://github.com/linuxmint/nemo/issues> (search first for "sort" and "slow") |
 | Account | GitHub |
-| License | GPL-2.0-or-later. Bucketization under MIT (or LGPL-2.1-or-later) fits |
+| License | GPL-2.0-or-later. The [Bucketization exception](../../../../LICENSE-EXCEPTION-Bucketization.md) lets it use the code under its own license |
 | AI policy (2026-10-24) | none found. Disclose anyway |
 | Fit | **high**. Nemo owns its sort (`nemo_list_model_sort_file_entries()`) and caches collation keys |
 | First post | issue: proposal with numbers |
@@ -73,7 +73,8 @@ re-sort excludes GtkTreeView's rows-reordered handling.
 > finish the other buckets from an idle callback. Would that be acceptable?
 >
 > Small folders gain nothing visible. If you're interested I'd write it in
-> C for Nemo's list model (the reference code is C++/Java under MIT).
+> C for Nemo's list model (the reference code is C++/Java, with a license exception
+> for Nemo).
 >
 > Disclosure: the reference implementation and the benchmarks were written
 > with an AI coding assistant, under my direction and review. The design is
