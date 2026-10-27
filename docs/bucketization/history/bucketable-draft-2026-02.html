@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Bucketable — Persistent Bucket-Based Sorting Interface</title>
+<style>
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.6;
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 0 20px;
+  color: #222;
+}
+h1, h2, h3, h4 {
+  line-height: 1.25;
+}
+h1 {
+  border-bottom: 3px solid #000;
+  padding-bottom: 0.3em;
+}
+h2 {
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 0.2em;
+  margin-top: 2.5em;
+}
+code, pre {
+  background: #f6f6f6;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+code {
+  padding: 2px 5px;
+}
+pre {
+  padding: 12px;
+  overflow-x: auto;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1em 0;
+}
+th, td {
+  border: 1px solid #ccc;
+  padding: 8px 10px;
+  text-align: left;
+}
+th {
+  background: #eee;
+}
+.note {
+  background: #ffffe0;
+  border-left: 4px solid #f0c000;
+  padding: 10px;
+  margin: 1em 0;
+}
+</style>
+</head>
+<body>
+
+<h1>Bucketable</h1>
+
+<p><strong>Bucketable</strong> is a persistent, bucket-indexed sorting interface optimized for interactive user interfaces such as file explorers, asset browsers, IDE file lists, and similar systems where the same dataset is re-sorted repeatedly by a small set of known attributes.</p>
+
+<p><strong>Subtitle:</strong><br>
+<em>Bucketable: a persistent bucket-indexed sorting interface for interactive UIs</em></p>
+
+<h2>1. Motivation</h2>
+
+<p>Traditional comparison-based sorting algorithms (<code>std::sort</code>, <code>qsort</code>) recompute ordering from scratch every time the user changes a sort key. In interactive systems, this leads to repeated <em>O(n log n)</em> work on essentially static datasets.</p>
+
+<p>Bucketable reframes sorting as a <strong>persistent interface problem</strong> rather than a transient algorithmic one. By pre-bucketing items according to sortable attributes, it enables instant sort switching with predictable performance.</p>
+
+<h2>2. Core Concept</h2>
+
+<p>Each sortable attribute maps items into a fixed number of buckets (typically 256). For each attribute, Bucketable builds and stores:</p>
+
+<ul>
+  <li>A bucket histogram</li>
+  <li>Prefix-sum offsets</li>
+  <li>A stable bucket-ordered item array</li>
+</ul>
+
+<p>Switching sort order is reduced to selecting a precomputed ordering, making UI sort operations effectively constant time.</p>
+
+<h2>3. Why 8-Bit Buckets</h2>
+
+<ul>
+  <li>256 counters fit comfortably in L1 cache</li>
+  <li>Prefix sums are trivial and fast</li>
+  <li>Good balance between resolution and overhead</li>
+  <li>Natural fit for SIMD and parallelization</li>
+</ul>
+
+<p>Other bucket widths are possible, but 8-bit buckets are the recommended default.</p>
+
+<h2>4. Attribute Bucketing Strategies</h2>
+
+<h3>4.1 Dates and Timestamps</h3>
+
+<p>Dates are normalized to a monotonic integer representation (e.g. Unix timestamp). Bucketable uses <strong>dataset-local ranges</strong> rather than fixed global epochs.</p>
+
+<p><strong>Range definition:</strong></p>
+<ul>
+  <li><code>min_date</code> = minimum timestamp in dataset</li>
+  <li><code>max_date</code> = maximum timestamp in dataset</li>
+</ul>
+
+<p><strong>Bucket mapping:</strong></p>
+
+<pre><code>bucket = (date - min_date) * 255 / (max_date - min_date)</code></pre>
+
+<p>If <code>min_date == max_date</code>, all items map to bucket 0.</p>
+
+<h3>4.2 Numeric Attributes</h3>
+
+<p>Numeric attributes (file size, counters, IDs) use the same linear normalization strategy as dates.</p>
+
+<h3>4.3 Strings</h3>
+
+<p>Strings use a two-phase strategy: coarse radix-style bucketing followed by locale-aware ordering within buckets.</p>
+
+<pre><code>struct bucketable_string_key {
+    uint8_t primary;
+    uint8_t secondary; /* optional */
+    uint16_t spill;
+};</code></pre>
+
+<div class="note">
+<strong>Note:</strong> Bucketable does not replace locale-aware collation.
+</div>
+
+<h2>5. Statistics vs Radix Strategies</h2>
+
+<p>Radix-style bucketing is the default. Quantile/statistics-based bucketing is optional and opt-in.</p>
+
+<h2>6. Multi-Key Sorting</h2>
+
+<p>Bucketable supports persistent, radix-like multi-key sorting.</p>
+
+<h2>7. Reference C Interface</h2>
+
+<pre><code>typedef uint8_t (*bucket_fn)(const void *item);
+
+typedef struct {
+    bucket_fn bucket;
+    const char *name;
+} bucketable_key_t;
+
+typedef struct {
+    void   **items;
+    size_t   count;
+    size_t   bucket_offsets[257];
+} bucketable_index_t;
+</code></pre>
+
+<h2>8. Invalidation Model</h2>
+
+<p>Indices are rebuilt only when data or attribute semantics change.</p>
+
+<h2>9. Implementation Language</h2>
+
+<p>The core library is implemented in <strong>C</strong> for ABI stability and maximum interoperability. Optional C++ wrappers may be provided.</p>
+
+<h2>10. Summary</h2>
+
+<p><em>Pay once, reuse until invalidated.</em></p>
+
+</body>
+</html>

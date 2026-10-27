@@ -1,0 +1,343 @@
+
+../../SpeedUp/BinarySearch/corrected_search.o:     file format elf64-x86-64
+
+
+Disassembly of section .text:
+
+0000000000000000 <branching_cache_optimized_fixed>:
+   0:	55                   	push   rbp
+   1:	48 89 e5             	mov    rbp,rsp
+   4:	53                   	push   rbx
+   5:	41 54                	push   r12
+   7:	41 55                	push   r13
+   9:	41 56                	push   r14
+   b:	41 57                	push   r15
+   d:	48 31 c0             	xor    rax,rax
+  10:	48 89 d3             	mov    rbx,rdx
+  13:	48 ff cb             	dec    rbx
+  16:	49 89 fc             	mov    r12,rdi
+  19:	49 89 f5             	mov    r13,rsi
+  1c:	49 8b 0c c4          	mov    rcx,QWORD PTR [r12+rax*8]
+  20:	49 8b 14 dc          	mov    rdx,QWORD PTR [r12+rbx*8]
+
+0000000000000024 <branching_cache_optimized_fixed.search_loop>:
+  24:	48 39 d8             	cmp    rax,rbx
+  27:	0f 8f c0 00 00 00    	jg     ed <branching_cache_optimized_fixed.not_found>
+  2d:	48 89 c1             	mov    rcx,rax
+  30:	48 01 d9             	add    rcx,rbx
+  33:	48 d1 e9             	shr    rcx,1
+  36:	49 89 ce             	mov    r14,rcx
+  39:	49 83 e6 07          	and    r14,0x7
+  3d:	74 24                	je     63 <branching_cache_optimized_fixed.aligned_mid>
+  3f:	49 89 cf             	mov    r15,rcx
+  42:	49 83 e7 f8          	and    r15,0xfffffffffffffff8
+  46:	49 39 c7             	cmp    r15,rax
+  49:	7c 05                	jl     50 <branching_cache_optimized_fixed.try_align_up>
+  4b:	4c 89 f9             	mov    rcx,r15
+  4e:	eb 13                	jmp    63 <branching_cache_optimized_fixed.aligned_mid>
+
+0000000000000050 <branching_cache_optimized_fixed.try_align_up>:
+  50:	49 89 cf             	mov    r15,rcx
+  53:	49 83 c7 08          	add    r15,0x8
+  57:	49 83 e7 f8          	and    r15,0xfffffffffffffff8
+  5b:	49 39 df             	cmp    r15,rbx
+  5e:	7f 03                	jg     63 <branching_cache_optimized_fixed.aligned_mid>
+  60:	4c 89 f9             	mov    rcx,r15
+
+0000000000000063 <branching_cache_optimized_fixed.aligned_mid>:
+  63:	49 89 c0             	mov    r8,rax
+  66:	49 01 c8             	add    r8,rcx
+  69:	49 d1 e8             	shr    r8,1
+  6c:	49 39 c8             	cmp    r8,rcx
+  6f:	74 04                	je     75 <branching_cache_optimized_fixed.skip_left_prefetch>
+  71:	4f 8b 34 c4          	mov    r14,QWORD PTR [r12+r8*8]
+
+0000000000000075 <branching_cache_optimized_fixed.skip_left_prefetch>:
+  75:	49 89 c9             	mov    r9,rcx
+  78:	49 01 d9             	add    r9,rbx
+  7b:	49 d1 e9             	shr    r9,1
+  7e:	49 39 c9             	cmp    r9,rcx
+  81:	74 04                	je     87 <branching_cache_optimized_fixed.skip_right_prefetch>
+  83:	4f 8b 3c cc          	mov    r15,QWORD PTR [r12+r9*8]
+
+0000000000000087 <branching_cache_optimized_fixed.skip_right_prefetch>:
+  87:	48 89 ca             	mov    rdx,rcx
+  8a:	48 83 ea 08          	sub    rdx,0x8
+  8e:	48 39 c2             	cmp    rdx,rax
+  91:	7c 05                	jl     98 <branching_cache_optimized_fixed.no_left_prefetch_early>
+  93:	41 0f 18 04 d4       	prefetchnta BYTE PTR [r12+rdx*8]
+
+0000000000000098 <branching_cache_optimized_fixed.no_left_prefetch_early>:
+  98:	48 89 ca             	mov    rdx,rcx
+  9b:	48 83 c2 08          	add    rdx,0x8
+  9f:	48 39 da             	cmp    rdx,rbx
+  a2:	7f 05                	jg     a9 <branching_cache_optimized_fixed.no_right_prefetch_early>
+  a4:	41 0f 18 0c d4       	prefetcht0 BYTE PTR [r12+rdx*8]
+
+00000000000000a9 <branching_cache_optimized_fixed.no_right_prefetch_early>:
+  a9:	49 8b 14 cc          	mov    rdx,QWORD PTR [r12+rcx*8]
+  ad:	4c 39 ea             	cmp    rdx,r13
+  b0:	74 36                	je     e8 <branching_cache_optimized_fixed.found>
+  b2:	4d 85 f6             	test   r14,r14
+  b5:	74 0f                	je     c6 <branching_cache_optimized_fixed.no_reg_hit>
+  b7:	4d 39 ee             	cmp    r14,r13
+  ba:	74 22                	je     de <branching_cache_optimized_fixed.found_left_reg>
+  bc:	4d 85 ff             	test   r15,r15
+  bf:	74 05                	je     c6 <branching_cache_optimized_fixed.no_reg_hit>
+  c1:	4d 39 ef             	cmp    r15,r13
+  c4:	74 1d                	je     e3 <branching_cache_optimized_fixed.found_right_reg>
+
+00000000000000c6 <branching_cache_optimized_fixed.no_reg_hit>:
+  c6:	7c 0b                	jl     d3 <branching_cache_optimized_fixed.greater>
+
+00000000000000c8 <branching_cache_optimized_fixed.less>:
+  c8:	48 89 cb             	mov    rbx,rcx
+  cb:	48 ff cb             	dec    rbx
+  ce:	e9 51 ff ff ff       	jmp    24 <branching_cache_optimized_fixed.search_loop>
+
+00000000000000d3 <branching_cache_optimized_fixed.greater>:
+  d3:	48 89 c8             	mov    rax,rcx
+  d6:	48 ff c0             	inc    rax
+  d9:	e9 46 ff ff ff       	jmp    24 <branching_cache_optimized_fixed.search_loop>
+
+00000000000000de <branching_cache_optimized_fixed.found_left_reg>:
+  de:	4c 89 c0             	mov    rax,r8
+  e1:	eb 11                	jmp    f4 <branching_cache_optimized_fixed.done>
+
+00000000000000e3 <branching_cache_optimized_fixed.found_right_reg>:
+  e3:	4c 89 c8             	mov    rax,r9
+  e6:	eb 0c                	jmp    f4 <branching_cache_optimized_fixed.done>
+
+00000000000000e8 <branching_cache_optimized_fixed.found>:
+  e8:	48 89 c8             	mov    rax,rcx
+  eb:	eb 07                	jmp    f4 <branching_cache_optimized_fixed.done>
+
+00000000000000ed <branching_cache_optimized_fixed.not_found>:
+  ed:	48 c7 c0 ff ff ff ff 	mov    rax,0xffffffffffffffff
+
+00000000000000f4 <branching_cache_optimized_fixed.done>:
+  f4:	41 5f                	pop    r15
+  f6:	41 5e                	pop    r14
+  f8:	41 5d                	pop    r13
+  fa:	41 5c                	pop    r12
+  fc:	5b                   	pop    rbx
+  fd:	48 89 ec             	mov    rsp,rbp
+ 100:	5d                   	pop    rbp
+ 101:	c3                   	ret
+
+0000000000000102 <branchless_cache_optimized_fixed>:
+ 102:	55                   	push   rbp
+ 103:	48 89 e5             	mov    rbp,rsp
+ 106:	53                   	push   rbx
+ 107:	41 54                	push   r12
+ 109:	41 55                	push   r13
+ 10b:	41 56                	push   r14
+ 10d:	41 57                	push   r15
+ 10f:	48 31 c0             	xor    rax,rax
+ 112:	48 89 d3             	mov    rbx,rdx
+ 115:	48 ff cb             	dec    rbx
+ 118:	49 89 fc             	mov    r12,rdi
+ 11b:	49 89 f5             	mov    r13,rsi
+
+000000000000011e <branchless_cache_optimized_fixed.cache_phase>:
+ 11e:	49 89 de             	mov    r14,rbx
+ 121:	49 29 c6             	sub    r14,rax
+ 124:	49 81 fe 00 04 00 00 	cmp    r14,0x400
+ 12b:	76 45                	jbe    172 <branchless_cache_optimized_fixed.branchless_search>
+ 12d:	48 89 c1             	mov    rcx,rax
+ 130:	48 01 d9             	add    rcx,rbx
+ 133:	48 d1 e9             	shr    rcx,1
+ 136:	49 89 cf             	mov    r15,rcx
+ 139:	49 83 e7 f8          	and    r15,0xfffffffffffffff8
+ 13d:	49 39 c7             	cmp    r15,rax
+ 140:	7c 03                	jl     145 <branchless_cache_optimized_fixed.use_original_mid_cache>
+ 142:	4c 89 f9             	mov    rcx,r15
+
+0000000000000145 <branchless_cache_optimized_fixed.use_original_mid_cache>:
+ 145:	e8 70 00 00 00       	call   1ba <prefetch_for_next_iteration>
+ 14a:	49 8b 14 cc          	mov    rdx,QWORD PTR [r12+rcx*8]
+ 14e:	4c 39 ea             	cmp    rdx,r13
+ 151:	74 4d                	je     1a0 <branchless_cache_optimized_fixed.found_branchless>
+ 153:	4c 8d 71 01          	lea    r14,[rcx+0x1]
+ 157:	4c 8d 79 ff          	lea    r15,[rcx-0x1]
+ 15b:	49 0f 4c c6          	cmovl  rax,r14
+ 15f:	49 0f 4f df          	cmovg  rbx,r15
+ 163:	49 89 de             	mov    r14,rbx
+ 166:	49 29 c6             	sub    r14,rax
+ 169:	49 81 fe 00 04 00 00 	cmp    r14,0x400
+ 170:	77 ac                	ja     11e <branchless_cache_optimized_fixed.cache_phase>
+
+0000000000000172 <branchless_cache_optimized_fixed.branchless_search>:
+ 172:	48 39 d8             	cmp    rax,rbx
+ 175:	7f 2e                	jg     1a5 <branchless_cache_optimized_fixed.not_found_branchless>
+ 177:	48 89 c1             	mov    rcx,rax
+ 17a:	48 01 d9             	add    rcx,rbx
+ 17d:	48 d1 e9             	shr    rcx,1
+ 180:	e8 58 00 00 00       	call   1dd <prefetch_next_mid_candidates>
+ 185:	49 8b 14 cc          	mov    rdx,QWORD PTR [r12+rcx*8]
+ 189:	4c 39 ea             	cmp    rdx,r13
+ 18c:	74 12                	je     1a0 <branchless_cache_optimized_fixed.found_branchless>
+ 18e:	4c 8d 71 01          	lea    r14,[rcx+0x1]
+ 192:	4c 8d 79 ff          	lea    r15,[rcx-0x1]
+ 196:	49 0f 4c c6          	cmovl  rax,r14
+ 19a:	49 0f 4f df          	cmovg  rbx,r15
+ 19e:	eb d2                	jmp    172 <branchless_cache_optimized_fixed.branchless_search>
+
+00000000000001a0 <branchless_cache_optimized_fixed.found_branchless>:
+ 1a0:	48 89 c8             	mov    rax,rcx
+ 1a3:	eb 07                	jmp    1ac <branchless_cache_optimized_fixed.done_branchless>
+
+00000000000001a5 <branchless_cache_optimized_fixed.not_found_branchless>:
+ 1a5:	48 c7 c0 ff ff ff ff 	mov    rax,0xffffffffffffffff
+
+00000000000001ac <branchless_cache_optimized_fixed.done_branchless>:
+ 1ac:	41 5f                	pop    r15
+ 1ae:	41 5e                	pop    r14
+ 1b0:	41 5d                	pop    r13
+ 1b2:	41 5c                	pop    r12
+ 1b4:	5b                   	pop    rbx
+ 1b5:	48 89 ec             	mov    rsp,rbp
+ 1b8:	5d                   	pop    rbp
+ 1b9:	c3                   	ret
+
+00000000000001ba <prefetch_for_next_iteration>:
+ 1ba:	48 89 ca             	mov    rdx,rcx
+ 1bd:	48 83 ea 08          	sub    rdx,0x8
+ 1c1:	48 39 c2             	cmp    rdx,rax
+ 1c4:	7c 05                	jl     1cb <prefetch_for_next_iteration.no_prefetch_left_2>
+ 1c6:	41 0f 18 0c d4       	prefetcht0 BYTE PTR [r12+rdx*8]
+
+00000000000001cb <prefetch_for_next_iteration.no_prefetch_left_2>:
+ 1cb:	48 89 ca             	mov    rdx,rcx
+ 1ce:	48 83 c2 08          	add    rdx,0x8
+ 1d2:	48 39 da             	cmp    rdx,rbx
+ 1d5:	7f 05                	jg     1dc <prefetch_for_next_iteration.no_prefetch_right_2>
+ 1d7:	41 0f 18 0c d4       	prefetcht0 BYTE PTR [r12+rdx*8]
+
+00000000000001dc <prefetch_for_next_iteration.no_prefetch_right_2>:
+ 1dc:	c3                   	ret
+
+00000000000001dd <prefetch_next_mid_candidates>:
+ 1dd:	48 89 c2             	mov    rdx,rax
+ 1e0:	48 01 da             	add    rdx,rbx
+ 1e3:	48 d1 ea             	shr    rdx,1
+ 1e6:	48 39 c2             	cmp    rdx,rax
+ 1e9:	74 05                	je     1f0 <prefetch_next_mid_candidates.no_prefetch_next_left>
+ 1eb:	41 0f 18 0c d4       	prefetcht0 BYTE PTR [r12+rdx*8]
+
+00000000000001f0 <prefetch_next_mid_candidates.no_prefetch_next_left>:
+ 1f0:	48 89 c2             	mov    rdx,rax
+ 1f3:	48 01 da             	add    rdx,rbx
+ 1f6:	48 d1 ea             	shr    rdx,1
+ 1f9:	48 39 da             	cmp    rdx,rbx
+ 1fc:	74 05                	je     203 <prefetch_next_mid_candidates.no_prefetch_next_right>
+ 1fe:	41 0f 18 0c d4       	prefetcht0 BYTE PTR [r12+rdx*8]
+
+0000000000000203 <prefetch_next_mid_candidates.no_prefetch_next_right>:
+ 203:	c3                   	ret
+
+0000000000000204 <branchless_prefetch_optimized_fixed>:
+ 204:	55                   	push   rbp
+ 205:	48 89 e5             	mov    rbp,rsp
+ 208:	53                   	push   rbx
+ 209:	41 54                	push   r12
+ 20b:	41 55                	push   r13
+ 20d:	41 56                	push   r14
+ 20f:	41 57                	push   r15
+ 211:	56                   	push   rsi
+ 212:	57                   	push   rdi
+ 213:	48 31 c0             	xor    rax,rax
+ 216:	48 89 d3             	mov    rbx,rdx
+ 219:	48 ff cb             	dec    rbx
+ 21c:	49 89 fc             	mov    r12,rdi
+ 21f:	49 89 f5             	mov    r13,rsi
+ 222:	4d 31 c0             	xor    r8,r8
+ 225:	4d 31 c9             	xor    r9,r9
+ 228:	4d 31 f6             	xor    r14,r14
+ 22b:	4d 31 ff             	xor    r15,r15
+
+000000000000022e <branchless_prefetch_optimized_fixed.fine_loop_fixed>:
+ 22e:	48 39 d8             	cmp    rax,rbx
+ 231:	0f 8f 96 00 00 00    	jg     2cd <branchless_prefetch_optimized_fixed.not_found_prefetch_fixed>
+ 237:	48 89 c1             	mov    rcx,rax
+ 23a:	48 01 d9             	add    rcx,rbx
+ 23d:	48 d1 e9             	shr    rcx,1
+ 240:	4d 85 c0             	test   r8,r8
+ 243:	74 05                	je     24a <branchless_prefetch_optimized_fixed.check_slot2>
+ 245:	4d 39 ee             	cmp    r14,r13
+ 248:	74 74                	je     2be <branchless_prefetch_optimized_fixed.found_slot1_fixed>
+
+000000000000024a <branchless_prefetch_optimized_fixed.check_slot2>:
+ 24a:	4d 85 c9             	test   r9,r9
+ 24d:	74 05                	je     254 <branchless_prefetch_optimized_fixed.no_reg_hit_fixed>
+ 24f:	4d 39 ef             	cmp    r15,r13
+ 252:	74 6f                	je     2c3 <branchless_prefetch_optimized_fixed.found_slot2_fixed>
+
+0000000000000254 <branchless_prefetch_optimized_fixed.no_reg_hit_fixed>:
+ 254:	48 89 c7             	mov    rdi,rax
+ 257:	48 01 cf             	add    rdi,rcx
+ 25a:	48 d1 ef             	shr    rdi,1
+ 25d:	48 39 cf             	cmp    rdi,rcx
+ 260:	74 07                	je     269 <branchless_prefetch_optimized_fixed.skip_slot1_prefetch_fixed>
+ 262:	49 89 f8             	mov    r8,rdi
+ 265:	4d 8b 34 fc          	mov    r14,QWORD PTR [r12+rdi*8]
+
+0000000000000269 <branchless_prefetch_optimized_fixed.skip_slot1_prefetch_fixed>:
+ 269:	48 89 ce             	mov    rsi,rcx
+ 26c:	48 01 de             	add    rsi,rbx
+ 26f:	48 d1 ee             	shr    rsi,1
+ 272:	48 39 ce             	cmp    rsi,rcx
+ 275:	74 07                	je     27e <branchless_prefetch_optimized_fixed.skip_slot2_prefetch_fixed>
+ 277:	49 89 f1             	mov    r9,rsi
+ 27a:	4d 8b 3c f4          	mov    r15,QWORD PTR [r12+rsi*8]
+
+000000000000027e <branchless_prefetch_optimized_fixed.skip_slot2_prefetch_fixed>:
+ 27e:	48 89 ca             	mov    rdx,rcx
+ 281:	48 83 c2 10          	add    rdx,0x10
+ 285:	48 39 da             	cmp    rdx,rbx
+ 288:	7f 05                	jg     28f <branchless_prefetch_optimized_fixed.no_far_prefetch_right_fixed>
+ 28a:	41 0f 18 0c d4       	prefetcht0 BYTE PTR [r12+rdx*8]
+
+000000000000028f <branchless_prefetch_optimized_fixed.no_far_prefetch_right_fixed>:
+ 28f:	48 89 ca             	mov    rdx,rcx
+ 292:	48 83 ea 10          	sub    rdx,0x10
+ 296:	48 39 c2             	cmp    rdx,rax
+ 299:	7c 05                	jl     2a0 <branchless_prefetch_optimized_fixed.no_far_prefetch_left_fixed>
+ 29b:	41 0f 18 0c d4       	prefetcht0 BYTE PTR [r12+rdx*8]
+
+00000000000002a0 <branchless_prefetch_optimized_fixed.no_far_prefetch_left_fixed>:
+ 2a0:	49 8b 14 cc          	mov    rdx,QWORD PTR [r12+rcx*8]
+ 2a4:	4c 39 ea             	cmp    rdx,r13
+ 2a7:	74 1f                	je     2c8 <branchless_prefetch_optimized_fixed.found_prefetch_fixed>
+ 2a9:	48 8d 79 01          	lea    rdi,[rcx+0x1]
+ 2ad:	48 8d 71 ff          	lea    rsi,[rcx-0x1]
+ 2b1:	48 0f 4c c7          	cmovl  rax,rdi
+ 2b5:	48 0f 4f de          	cmovg  rbx,rsi
+ 2b9:	e9 70 ff ff ff       	jmp    22e <branchless_prefetch_optimized_fixed.fine_loop_fixed>
+
+00000000000002be <branchless_prefetch_optimized_fixed.found_slot1_fixed>:
+ 2be:	4c 89 c0             	mov    rax,r8
+ 2c1:	eb 11                	jmp    2d4 <branchless_prefetch_optimized_fixed.done_prefetch_fixed>
+
+00000000000002c3 <branchless_prefetch_optimized_fixed.found_slot2_fixed>:
+ 2c3:	4c 89 c8             	mov    rax,r9
+ 2c6:	eb 0c                	jmp    2d4 <branchless_prefetch_optimized_fixed.done_prefetch_fixed>
+
+00000000000002c8 <branchless_prefetch_optimized_fixed.found_prefetch_fixed>:
+ 2c8:	48 89 c8             	mov    rax,rcx
+ 2cb:	eb 07                	jmp    2d4 <branchless_prefetch_optimized_fixed.done_prefetch_fixed>
+
+00000000000002cd <branchless_prefetch_optimized_fixed.not_found_prefetch_fixed>:
+ 2cd:	48 c7 c0 ff ff ff ff 	mov    rax,0xffffffffffffffff
+
+00000000000002d4 <branchless_prefetch_optimized_fixed.done_prefetch_fixed>:
+ 2d4:	5f                   	pop    rdi
+ 2d5:	5e                   	pop    rsi
+ 2d6:	41 5f                	pop    r15
+ 2d8:	41 5e                	pop    r14
+ 2da:	41 5d                	pop    r13
+ 2dc:	41 5c                	pop    r12
+ 2de:	5b                   	pop    rbx
+ 2df:	48 89 ec             	mov    rsp,rbp
+ 2e2:	5d                   	pop    rbp
+ 2e3:	c3                   	ret

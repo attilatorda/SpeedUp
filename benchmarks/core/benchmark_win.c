@@ -18,6 +18,14 @@ __declspec(dllexport) int64_t optimized_binary_search_win64(int64_t* array, int6
 __declspec(dllexport) int64_t measure_cycles_win64(int64_t (*func)(int64_t*, int64_t, int64_t), 
                                                    int64_t* array, int64_t key, int64_t size);
 
+// 64-bit generator covering the whole index range (Steele, Lea, Flood 2014)
+static uint64_t splitmix64(uint64_t* state) {
+    uint64_t z = (*state += 0x9E3779B97F4A7C15ULL);
+    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
+    z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
+    return z ^ (z >> 31);
+}
+
 // Reference C implementation
 int64_t reference_binary_search(int64_t* array, int64_t key, int64_t size) {
     int64_t left = 0, right = size - 1;
@@ -351,7 +359,11 @@ int main() {
         }
         
         // Generate test keys (mix of existing and non-existing)
-        srand(12345);  // Fixed seed for reproducibility
+#ifdef BENCH_LEGACY_RAND
+        // The original generator, kept to reproduce the published numbers.
+        // RAND_MAX is 32767 on MSVC and MinGW, so only indices 0..32767 are
+        // ever targeted and large arrays are measured cache-hot.
+        srand(12345);
         for (int64_t i = 0; i < num_keys; i++) {
             if (rand() % 2 == 0) {
                 keys[i] = (rand() % size) * 2;      // Existing key
@@ -359,6 +371,14 @@ int main() {
                 keys[i] = (rand() % size) * 2 + 1;  // Non-existing key
             }
         }
+#else
+        uint64_t rng = 12345;  // Fixed seed for reproducibility
+        for (int64_t i = 0; i < num_keys; i++) {
+            uint64_t r = splitmix64(&rng);
+            int64_t index = (int64_t)((r >> 1) % (uint64_t)size);
+            keys[i] = index * 2 + (int64_t)(r & 1);  // even: existing, odd: missing
+        }
+#endif
         
         printf("\n%-20s %15s %12s\n", "Function", "Time (ns)", "Correct");
         printf("------------------------------------------------\n");

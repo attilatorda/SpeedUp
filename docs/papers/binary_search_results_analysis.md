@@ -1,5 +1,10 @@
 # Binary Search Optimization Results Analysis
 
+> **Superseded.** The harness behind these numbers drew keys with `rand()`,
+> which only reaches indices 0–32767. For arrays of 100K elements and up,
+> every search stayed cache-hot. See `legacy/README.md` for details and
+> `docs/papers/binary-search/` for the re-measured study.
+
 This document summarizes the baseline benchmark from `benchmarks/outputs/results_baseline_windows.csv`.
 
 ## Baseline table (ns/search)
