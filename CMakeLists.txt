@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(SpeedUp VERSION 0.2.0 LANGUAGES C CXX)
+project(SpeedUp VERSION 0.3.0 LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
@@ -40,6 +40,7 @@ add_library(speedup
     src/core/dispatch.c
     src/core/cpu_features.c
     src/algorithms/binary_search/binary_search_ref.c
+    src/algorithms/binary_search/binary_search_cpu.c
     src/algorithms/binary_search/binary_search_dispatch.c
     src/backends/gpu/common/gpu_backend_common.c
     src/backends/gpu/cuda/cuda_runtime_check.c
@@ -50,10 +51,12 @@ target_include_directories(speedup
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_BINARY_DIR}/generated
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/binary_search
 )
 
-add_executable(speedup_smoke tests/unit/test_binary_search.c)
-target_link_libraries(speedup_smoke PRIVATE speedup)
+add_executable(speedup_binary_search_test tests/unit/test_binary_search.c)
+target_link_libraries(speedup_binary_search_test PRIVATE speedup)
 
 # Bucketization: header-only C++17 interface (include/speedup/bucketization.hpp)
 add_library(speedup_bucketization INTERFACE)
@@ -124,19 +127,33 @@ if(SPEEDUP_BUILD_EXAMPLES)
     target_link_libraries(speedup_example_file_browser PRIVATE speedup_bucketization)
 endif()
 
-if(WIN32 AND SPEEDUP_BUILD_BENCHMARKS AND SPEEDUP_ENABLE_ASM)
+if(SPEEDUP_BUILD_BENCHMARKS)
+    # Binary search study (benchmarks/binary_search): every variant, L1 to DRAM.
+    add_executable(speedup_bench_bsearch benchmarks/binary_search/bench_bsearch.cpp)
+    target_include_directories(speedup_bench_bsearch PRIVATE src/algorithms/binary_search)
+    target_link_libraries(speedup_bench_bsearch PRIVATE speedup)
+endif()
+
+if(WIN32 AND SPEEDUP_BUILD_BENCHMARKS AND SPEEDUP_ENABLE_ASM AND CMAKE_SIZEOF_VOID_P EQUAL 8)
     enable_language(ASM_NASM)
 
     add_library(speedup_bsearch_win64_asm OBJECT
         src/backends/cpu/x86_64/binary_search_win64.asm
     )
 
+    target_sources(speedup_bench_bsearch PRIVATE $<TARGET_OBJECTS:speedup_bsearch_win64_asm>)
+    target_compile_definitions(speedup_bench_bsearch PRIVATE SPEEDUP_BENCH_HAVE_ASM)
+
+    # The first prototype's harness (see legacy/README.md).
     add_executable(speedup_benchmark_win64
         benchmarks/core/benchmark_win.c
         $<TARGET_OBJECTS:speedup_bsearch_win64_asm>
     )
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU" OR CMAKE_C_COMPILER_ID STREQUAL "Clang")
+        target_compile_options(speedup_benchmark_win64 PRIVATE -mavx2)
+    endif()
 endif()
 
 enable_testing()
-add_test(NAME speedup_smoke COMMAND speedup_smoke)
+add_test(NAME speedup_binary_search_test COMMAND speedup_binary_search_test)
 add_test(NAME speedup_bucketization_test COMMAND speedup_bucketization_test)

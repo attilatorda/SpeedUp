@@ -1,2 +1,12 @@
 __pycache__/
 *.pyc
+# LaTeX build artifacts (docs/papers); main.pdf is kept
+docs/papers/**/*.aux
+docs/papers/**/*.bbl
+docs/papers/**/*.blg
+docs/papers/**/*.fdb_latexmk
+docs/papers/**/*.fls
+docs/papers/**/*.log
+docs/papers/**/*.out
+docs/papers/**/arxiv/
+docs/papers/build.log

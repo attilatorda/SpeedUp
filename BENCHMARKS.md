@@ -1,13 +1,25 @@
 # SpeedUp Benchmarks
 
-## Baseline
-- Baseline CSV: `benchmarks/outputs/results_baseline_windows.csv`
-- Analysis: `docs/papers/binary_search_results_analysis.md`
+## Binary search
 
-## How to run (Windows ASM lane)
-```powershell
-./benchmarks/scripts/run_windows_benchmark.ps1
+`speedup_bench_bsearch` measures every variant (the library's, the
+prototype's assembly and AVX2 searches, `std::lower_bound`, branchless,
+prefetching, Eytzinger and interleaved searches) from 8 KiB to 512 MiB, in
+throughput and latency modes, with keys uniform over the array.
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --target speedup_bench_bsearch
+python benchmarks/scripts/run_bsearch_benchmarks.py run --build build --label gcc
+python benchmarks/scripts/run_bsearch_benchmarks.py analyze   # figures, tables, paper numbers
 ```
+
+On Windows with NASM, the prototype's assembly is included. Results:
+`benchmarks/outputs/bsearch_ryzen2600x_{gcc,msvc}.csv`; method and analysis:
+`docs/papers/binary-search/`.
+
+The first baseline (`benchmarks/outputs/results_baseline_windows.csv`) is not
+valid for arrays of 100K elements and up; see `legacy/README.md`.
 
 ## Method notes
 - Measure ns/search across multiple dataset sizes.

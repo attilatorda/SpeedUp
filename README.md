@@ -81,14 +81,24 @@ int main(void) {
 - `ci/github/workflows`: CI skeleton
 - `legacy`: preserved original binary-search benchmark assets
 
-## Active binary-search optimization assets
-- ASM implementation (Windows x64): `src/backends/cpu/x86_64/binary_search_win64.asm`
-- Benchmark suite source: `benchmarks/core/benchmark_win.c`
-- Baseline benchmark output: `benchmarks/outputs/results_baseline_windows.csv`
-- Results analysis: `docs/papers/binary_search_results_analysis.md`
+## Binary search
+- API: `include/speedup/algorithms/binary_search.h`. Single keys:
+  `speedup_binary_search_i64`, `speedup_lower_bound_i64`. Many keys:
+  `speedup_binary_search_batch_i64`, `speedup_lower_bound_batch_i64`, which
+  search 16 keys in lockstep and are about 4× faster per key on large arrays.
+- Kernels: `src/algorithms/binary_search/bsearch_kernels.h`.
+- Study: `benchmarks/binary_search/bench_bsearch.cpp` (harness),
+  `benchmarks/outputs/bsearch_ryzen2600x_*.csv` (results),
+  `docs/papers/binary-search/` (paper).
+- The prototype's assembly and AVX2 searches (`legacy/`,
+  `src/backends/cpu/x86_64/binary_search_win64.asm`) are kept for the
+  comparison only; see `legacy/README.md` for why their first results did
+  not hold.
 
-## Build notes (Windows)
-- `speedup_benchmark_win64` target is defined in `CMakeLists.txt` and wires NASM ASM + benchmark C source.
+## Papers
+- `docs/papers/binary-search/`: what makes binary search fast, from L1 to DRAM
+- `docs/papers/bucketization/`: comparison-free re-sorting of multi-column views
+- Build: `python docs/papers/build_papers.py` (needs a LaTeX distribution with latexmk)
 
 ## Documentation index
 - Architecture: `docs/architecture/overview.md`
@@ -98,7 +108,7 @@ int main(void) {
 - How file managers sort today, and where to contribute: `docs/bucketization/file-manager-survey.md`
 - Launch-day contribution plan and per-project kits: `docs/bucketization/launch/README.md`
 - Plan for contributing to KDE Dolphin: `docs/bucketization/kde-contribution-plan.md`
-- Benchmark analysis: `docs/papers/binary_search_results_analysis.md`
+- Binary search study: `docs/papers/binary-search/`
 - Benchmark methodology baseline: `BENCHMARKS.md`
 - API docs (Doxygen): `docs/api/README.md`
 

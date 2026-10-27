@@ -4,6 +4,46 @@ All notable changes to SpeedUp. Versions follow
 [Semantic Versioning](https://semver.org/); while the major version is 0,
 a new minor version may change APIs.
 
+## [0.3.0] - unreleased
+
+Binary search, measured properly. The earlier benchmark drew its keys with
+`rand()`, which never exceeds 32,767, so it never searched beyond the first
+256 KiB of an array; its large-array results did not hold. A new harness
+measures 22 variants from 8 KiB to 512 MiB, and the library now uses what
+won.
+
+### Added
+
+- `speedup_lower_bound_i64`, `speedup_binary_search_batch_i64` and
+  `speedup_lower_bound_batch_i64`. The batch functions search 16 keys in
+  lockstep: about 4× faster per key than single searches on arrays larger
+  than the caches.
+- Benchmark harness `benchmarks/binary_search/bench_bsearch.cpp` (throughput
+  and latency modes, every variant verified before and during timing),
+  runner `benchmarks/scripts/run_bsearch_benchmarks.py`, results
+  `benchmarks/outputs/bsearch_ryzen2600x_*.csv`.
+- Papers, with every number generated from the result files:
+  `docs/papers/binary-search/` and `docs/papers/bucketization/`
+  (`docs/papers/build_papers.py` builds them and packs them for arXiv).
+- `legacy/README.md`: what the prototype files are and why their results do
+  not hold; the disassembly of the prototype's lost `*_fixed` functions.
+
+### Changed
+
+- `speedup_binary_search_i64` used the textbook search on every path. It now
+  uses a branchless search, with prefetching once the array exceeds the L2
+  cache hint (`speedup_set_cache_hint`): about 2× faster in the caches, and
+  never more than a few percent slower than the textbook search on large arrays.
+  When the key occurs more than once, it now returns the first occurrence.
+- `speedup_cpu_has_avx2` detects AVX2 (it returned 0).
+- A forced CUDA or OpenCL preference no longer makes the search return -1
+  (neither backend implements it yet).
+- `benchmarks/core/benchmark_win.c` draws its keys with SplitMix64;
+  `-DBENCH_LEGACY_RAND` restores the old generator.
+- The Bucketization benchmarks build on Windows (nnn's entry struct used
+  POSIX-only types); `run_bucketization_benchmarks.py --tag` keeps the results
+  of other machines apart.
+
 ## [0.2.0] - 2026-10-27
 
 Bucketization: fast re-sorting of collections that can be ordered in

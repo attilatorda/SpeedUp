@@ -1,0 +1,537 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{microtype}
+\usepackage{listings}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[hidelinks]{hyperref}
+
+\lstset{basicstyle=\ttfamily\small, columns=fullflexible, keepspaces=true, xleftmargin=1em}
+
+\input{generated/numbers.tex}
+% shorthands for the GCC results used throughout the text
+\newcommand{\g}[3]{\bsns{gcc}{#1}{#2}{#3}}
+\newcommand{\gx}[4]{\bsx{gcc}{#1}{#2}{#3}{#4}}
+
+\title{What Makes Binary Search Fast on a Desktop CPU?\\
+Branchless, Prefetched, Eytzinger and Interleaved Searches\\from L1 to DRAM}
+\author{Attila Torda}
+\date{October 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We measure 22 implementations of searching a sorted array of 64-bit integers
+on an AMD Zen+ desktop processor, for arrays from 8\,KiB to 512\,MiB, with two
+compilers, both for independent lookups (throughput) and for lookups that depend
+on each other (latency). The study started as a check of our own earlier
+benchmark, which had reported hand-written assembly and AVX2 searches beating
+the textbook search by up to 31\%. That benchmark drew its keys with
+\texttt{rand()}, which returns at most 32{,}767 on both Windows C libraries, so
+on large arrays it only ever searched the first 256\,KiB: it reported
+\bsleg{gcc}{reference}{24}\,ns per search where a correct key distribution
+gives \g{throughput}{reference}{24}\,ns. With keys spread over the whole array,
+none of the earlier assembly or SIMD variants beats the C reference by much,
+and the textbook ``branchless'' search becomes \emph{slower} than the branchy
+one on arrays that do not fit in the caches. What works is
+memory-level parallelism. Interleaving 16 independent searches in lockstep is
+\gx{throughput}{reference}{batch16}{26}$\times$ faster than the reference at
+512\,MiB and \gx{throughput}{reference}{batch16}{12}$\times$ faster in L1. For a
+single search, the Eytzinger layout with prefetching cuts latency by
+\gx{latency}{reference}{eytzinger_prefetch}{26}$\times$ at 512\,MiB. Two smaller
+findings matter in practice: power-of-two array sizes cost up to
+\bsalias{gcc}{batch16}{large}$\times$ more than their neighbours, and whether a
+compiler turns a select into a conditional move or a branch can change a
+variant's speed by a factor of three. We describe the harness, the pitfalls,
+and the variants we adopted in an open-source library.
+\end{abstract}
+
+\section{Introduction}
+
+Binary search over a sorted array is among the most used algorithms there are:
+it backs dictionary lookups in databases, symbol tables, sorted-set membership,
+and the merge and join steps of query engines. Its comparison count, $\lceil
+\log_2(n+1)\rceil$, is optimal. On a modern processor that count says little
+about its speed. Each step loads an element whose address depends on the
+previous comparison, so on an array larger than the caches every step can be a
+cache miss, and the steps form a dependency chain that the processor cannot
+overlap. A branchy implementation adds a branch misprediction on half of all
+steps.
+
+Many variants address one or the other cost: branch-free (``branchless'')
+updates, software prefetching of the next probe, cache-friendlier layouts such
+as Eytzinger (breadth-first) order, B-tree-like blocking and SIMD comparisons,
+and processing several searches at once. Khuong and Morin's
+study~\cite{khuong2017layouts} is the standard reference; it found that on
+large arrays the Eytzinger layout with prefetching is usually fastest, and that
+for small arrays a good branchless binary search on the sorted array is best.
+
+This paper reports a smaller, practical study with three aims. First, we
+correct our own earlier measurements (Section~\ref{sec:pitfall}): a key
+generator that looked harmless confined every search to the first 256\,KiB of
+the array, and the published conclusions about large arrays were artifacts.
+The pitfall is easy to fall into and invisible in the results, which makes it
+worth documenting. Second, we measure the earlier hand-written assembly and
+AVX2 variants against the established alternatives across the whole memory
+hierarchy of one desktop processor, with two compilers and in both a throughput
+and a latency setting (Sections~\ref{sec:method} and~\ref{sec:results}).
+Third, we turn the results into the defaults of an open-source C library
+(Section~\ref{sec:library}).
+
+\section{Background}\label{sec:background}
+
+\paragraph{The machine.} All measurements use an AMD Ryzen 5 2600X (Zen+, six
+cores, 3.6\,GHz base clock, 4.25\,GHz boost) with 16\,GB of dual-channel DDR4
+running at 2133\,MT/s, under Windows~10 22H2 with the ``High performance''
+power plan. Each core has a 32\,KiB L1 data cache and a 512\,KiB L2 cache; the
+16\,MiB L3 is split into two 8\,MiB halves, one per core complex, so a single
+thread sees 8\,MiB of L3~\cite{sevencpu-zen}. The L1 data TLB has 64 entries and
+the L2 TLB 1{,}536 entries for 4\,KiB pages, covering 6\,MiB. The core can have
+up to 22 L1 data-cache misses in flight~\cite{sevencpu-zen}. Our arrays use 8-byte
+keys, so the L1, L2 and L3 boundaries fall at $2^{12}$, $2^{16}$ and $2^{20}$
+elements.
+
+\paragraph{Variants of binary search.} A \emph{branchy} search compares the key
+with the middle element and branches; the branch is unpredictable, but the
+processor speculates past it and starts the next load early, which on a cache
+miss acts as a prefetch of one of the two possible next probes. A
+\emph{branchless} search~\cite{khuong2017layouts} replaces the branch with a
+conditional move: no mispredictions, but also no speculation, so every step
+waits for its load. Adding \emph{software prefetches} of both possible next
+probes recovers the overlap at the cost of extra memory traffic. The
+\emph{Eytzinger} layout stores the implicit binary search tree in
+breadth-first order, so the next probes of the next several steps share a
+cache line and can be prefetched together~\cite{khuong2017layouts}.
+Cache-oblivious layouts~\cite{brodal2002cacheoblivious} and SIMD-friendly
+$k$-ary layouts~\cite{schlegel2009kary,kim2010fast} change the layout too; we do
+not include them, because our library must search arrays in the caller's sorted
+order. Finally, when there are many keys to look up, the searches can be
+\emph{interleaved}: several are advanced one step each in turn, so their cache
+misses overlap. Group prefetching for hash joins~\cite{chen2004hashjoin},
+asynchronous memory access chaining~\cite{kocberber2015amac} and coroutine-based
+interleaving of index lookups~\cite{psaropoulos2017coroutines} apply this idea
+to database operators.
+
+\section{Variants}\label{sec:variants}
+
+Table~\ref{tab:variants} lists what we measured. All variants search the same
+sorted array in place, except Eytzinger, which needs its own copy of the
+data in breadth-first order; the time to build that copy is measured
+separately. All variants that return an exact match return the same index
+(the keys are distinct), which lets every timed run be checked with a
+checksum.
+
+\begin{table}[t]
+\centering
+\caption{The variants. \emph{Prototype} variants come from our earlier
+study, unchanged; the others are written in portable C. ``Calls'' are
+single-key functions called through a function pointer, as a library caller
+would; ``batch'' variants take an array of keys.}
+\label{tab:variants}
+\small
+\begin{tabular}{lp{10.2cm}}
+\toprule
+Variant & Description\\
+\midrule
+Reference & textbook branchy search with early exit on equality (C)\\
+\texttt{std::lower\_bound} & C++ standard library, then one equality test\\
+Prototype asm, branching & the reference in NASM assembly, Win64 calling convention\\
+Prototype asm, cmov & assembly with \texttt{cmov} bound updates and an early-exit branch\\
+Prototype asm, ``pipelined'' & assembly that loads the next middle element at the end of each step\\
+Prototype AVX2 & four probes per step, compared with one AVX2 instruction\\
+Prototype AVX2 + prefetch & the same, with \texttt{prefetcht0} of two guessed addresses\\
+Branchless & lower bound with a conditional select and a fixed trip count~\cite{khuong2017layouts}\\
+Branchless + prefetch & the same, prefetching both possible next probes every step\\
+Eytzinger + prefetch & breadth-first layout, branchless, prefetching three levels ahead~\cite{khuong2017layouts}\\
+Interleaved, $K$ keys & $K \in \{4,8,16,32\}$ branchless searches advanced in lockstep\\
+\quad + prefetch & each key's next probe prefetched as soon as it is known\\
+\quad select & the first version of the interleaved kernel (pointer select, see Section~\ref{sec:ifconv})\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The branchless lower bound is the formulation of Khuong and
+Morin~\cite{khuong2017layouts}:
+\begin{lstlisting}[language=C]
+const int64_t* base = a;
+while (n > 1) {
+    int64_t half = n / 2;
+    base = (base[half] < key) ? base + half : base;   /* cmov */
+    n -= half;
+}
+return (base - a) + (*base < key);
+\end{lstlisting}
+The trip count depends only on $n$, so all searches over the same array take
+the same number of steps. Interleaving exploits this: $K$ searches share the
+loop and its counter, and only their positions differ. In our final kernel the
+step is written as integer arithmetic on a position, not as a pointer select:
+\begin{lstlisting}[language=C]
+pos[j] += half & -(int64_t)(a[pos[j] + half] < key[j]);
+\end{lstlisting}
+Section~\ref{sec:ifconv} explains why.
+
+\section{Method}\label{sec:method}
+
+\paragraph{Data and keys.} An array of $n$ elements holds $0, 2, 4, \ldots,
+2(n-1)$. Each run draws $2^{19}$ keys from a SplitMix64
+generator~\cite{steele2014splitmix}: a uniform index $i \in [0, n)$ and a coin,
+giving the key $2i$ (present) or $2i+1$ (absent). Every search thus targets a
+uniformly random position of the whole array, and half of the searches fail.
+
+\paragraph{Sizes.} $n$ runs from $2^{10}$ to $2^{26}$ (8\,KiB to 512\,MiB) in
+half-octave steps; sizes between powers of two are rounded to integers.
+
+\paragraph{Modes.} In \emph{throughput} mode the keys are independent, so the
+processor may overlap consecutive searches, as in a loop over a list of
+lookups. In \emph{latency} mode each key is combined with the previous result
+before the search, $k_i' = k_i \oplus (r_{i-1} \wedge z)$, where $z$ is read
+from a \texttt{volatile} variable that holds zero: the key is unchanged, but
+the compiler and the processor must wait for the previous search to finish.
+This models a chain of dependent lookups, such as following references.
+Interleaved variants exist only in throughput mode.
+
+\paragraph{Timing.} One pass searches all $2^{19}$ keys and is timed with
+\texttt{std::chrono::steady\_clock}. Each variant runs one untimed pass, then
+nine timed passes; the passes of all variants are interleaved round-robin, so
+that slow periods of the machine affect all variants alike. We report the
+median and the interquartile range of the nine passes in nanoseconds per
+search. The thread is pinned to one core and runs at high priority.
+
+\paragraph{Correctness.} Before timing, each variant is compared with the
+reference on the four edge keys (below the minimum, the minimum, the maximum and
+above it) and on the first 4{,}096 keys of the run. Every timed pass also sums
+the returned indices, and the sum must equal the reference's. Every
+measurement reported here passed both checks.
+
+\paragraph{Repeatability.} Within a run, the nine passes agree closely: the
+median interquartile range is \bsrun{gcc}{within}\% (GCC) and
+\bsrun{msvc}{within}\% (MSVC) of the median. Between runs they agree less, for
+arrays between 1 and 16\,MiB, i.e.\ from twice the L2 cache to twice the L3 a
+core sees. Repeating that range ($2^{17}$ to $2^{21}$ elements) in a second run gave
+times that differ from the first by a median factor of
+\bsrun{gcc}{betweenmedian} (GCC) and \bsrun{msvc}{betweenmedian} (MSVC), and by
+up to \bsrun{gcc}{between}$\times$ and \bsrun{msvc}{between}$\times$, not
+always in the same direction for all variants. Each run allocates its arrays afresh, so the
+likely cause is the placement of the array's physical pages, which decides how
+the array maps onto the cache sets in that range. At the two ends of the range
+the runs agree within \bsrun{gcc}{ends}\% (GCC) and \bsrun{msvc}{ends}\% (MSVC);
+we did not repeat the other sizes. Both runs
+are in the published results; comparisons between variants
+within one run are reliable throughout, comparisons between runs (such as
+between compilers) only outside 1--16\,MiB.
+
+\paragraph{Compilers.} MinGW-w64 GCC 13.2 with \texttt{-O3} and Microsoft
+Visual C++ 19.41 (Visual Studio 2022, toolset 14.41) with \texttt{/O2}, both without
+\texttt{-march}/\texttt{/arch} options; the AVX2 prototypes carry a function-level
+target attribute. Single-key variants are called through a function pointer,
+which models a call into a library and prevents inlining into the timing loop.
+
+\section{The pitfall: keys that never leave the cache}\label{sec:pitfall}
+
+Our earlier benchmark generated keys as
+\begin{lstlisting}[language=C]
+srand(12345);
+keys[i] = (rand() % size) * 2;          /* or * 2 + 1 for a miss */
+\end{lstlisting}
+\texttt{RAND\_MAX} is 32{,}767 in both the Microsoft and the MinGW C runtime, so
+\texttt{rand() \% size} never exceeds 32{,}767. For arrays of up to 32{,}768
+elements nothing is wrong. For larger arrays, every search targets the first
+256\,KiB, which stays in the L2 cache, and the first comparisons of every search
+go the same way and are perfectly predicted. The earlier benchmark also used
+only 1{,}000 distinct keys for large arrays. Its conclusion that ``at 10 million
+elements the array exceeds the L3 cache and the search is memory-bound'' was
+therefore not tested by the experiment that seemed to support it.
+
+Figure~\ref{fig:pitfall} repeats the measurement with the old generator and
+with uniform keys. With the old keys the time per search barely grows beyond
+32{,}768 elements; the reference search at $2^{24}$ elements takes
+\bsleg{gcc}{reference}{24}\,ns, while uniform keys give
+\g{throughput}{reference}{24}\,ns, \bslegx{gcc}{reference}{24}$\times$ more. The
+error also changes rankings: with the old keys the prototype's branchless
+assembly looks competitive at large sizes
+(\bsleg{gcc}{asm_branchless}{24}\,ns), while with uniform keys it is the
+slowest variant (\g{throughput}{asm_branchless}{24}\,ns). Nothing in the old
+results looked suspicious; times grew slowly with the array size, as one might
+expect from a logarithmic algorithm.
+
+Two habits would have caught it: drawing keys from a generator whose range is
+known to cover the index space, and checking that the time per search for an
+array far larger than the last-level cache is close to the memory latency
+times the number of steps that miss. Measurement artifacts of this kind are
+a known hazard~\cite{mytkowicz2009wrongdata,hoefler2015benchmarking}; this one
+needs no exotic cause.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/legacy_rand.pdf}
+\caption{The same variants with the earlier benchmark's \texttt{rand()} keys
+(dotted) and with keys uniform over the array (solid), GCC, throughput mode.
+Beyond $2^{15}$ elements (256\,KiB) the old keys never leave the first 256\,KiB.}
+\label{fig:pitfall}
+\end{figure}
+
+\section{Results}\label{sec:results}
+
+Figures~\ref{fig:throughput} and~\ref{fig:latency} show the main variants
+compiled with GCC; Table~\ref{tab:gcc} lists all variants at five sizes, one in
+each level of the memory hierarchy. The MSVC results are in
+Table~\ref{tab:msvc} and discussed in Section~\ref{sec:compilers}.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/throughput_gcc.pdf}
+\caption{Throughput mode, GCC: nanoseconds per search, median of nine passes of
+$2^{19}$ searches, with the interquartile range shaded. Dotted lines mark the
+capacity of L1, L2 and the L3 a single core sees.}
+\label{fig:throughput}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/latency_gcc.pdf}
+\caption{Latency mode, GCC: every search depends on the result of the previous
+one.}
+\label{fig:latency}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\caption{GCC 13.2, nanoseconds per search (median). Columns are array sizes in
+L1, L2, L3 and DRAM; the fastest variant per column is in bold.}
+\label{tab:gcc}
+\resizebox{\linewidth}{!}{\input{generated/table_gcc.tex}}
+\end{table}
+
+\subsection{Single searches}
+
+\paragraph{In the caches,} the branchless search is the fastest search over the
+sorted array: \g{throughput}{branchless}{12}\,ns at 32\,KiB against
+\g{throughput}{reference}{12}\,ns for the reference
+(\gx{throughput}{reference}{branchless}{12}$\times$). Every branchy variant,
+including \texttt{std::lower\_bound} and the hand-written assembly, pays for a
+misprediction on about half of its steps; their curves lie on top of each
+other.
+
+\paragraph{Beyond the caches} the order reverses. At 512\,MiB the branchless
+search takes \g{throughput}{branchless}{26}\,ns, more than the reference's
+\g{throughput}{reference}{26}\,ns. The branchy search mispredicts, but while it
+waits for a load it speculatively issues the load of one of the two next
+probes; half of the time it guessed right and that load is already on its way.
+The branchless search issues nothing until its comparison resolves.
+Prefetching both candidate probes restores the overlap: the branchless search
+with prefetching is \gx{throughput}{reference}{branchless_prefetch}{26}$\times$
+faster than the reference at 512\,MiB and
+\gx{throughput}{reference}{branchless_prefetch}{12}$\times$ faster in L1. In the
+caches the two extra prefetch instructions per step cost it up to
+\bsrange{gcc}{throughput}{branchless_prefetch}{branchless}{max}$\times$ the time
+of the plain branchless search; beyond L3 they cut its time to as little as
+\bsrange{gcc}{throughput}{branchless_prefetch}{branchless}{min}$\times$. This reproduces Khuong and Morin's
+finding~\cite{khuong2017layouts} on a different microarchitecture.
+
+\paragraph{Eytzinger order} is the fastest single search from L2 outwards. Its
+prefetch fetches the cache line holding all eight nodes three levels below the
+current one, so the loads of the next three steps are already under way: at 512\,MiB
+it is \gx{throughput}{reference}{eytzinger_prefetch}{26}$\times$ faster than the
+reference in throughput mode and \gx{latency}{reference}{eytzinger_prefetch}{26}$\times$
+in latency mode. The price is a second copy of the data in a different order,
+built in a few nanoseconds per element, and a result that is a position in
+that copy, not in the sorted array.
+
+\paragraph{The latency mode} removes the overlap between consecutive searches.
+The branchless search suffers most: \g{latency}{branchless}{26}\,ns at 512\,MiB
+against \g{throughput}{branchless}{26}\,ns in throughput mode; in throughput
+mode the out-of-order core had been running the next search's first steps
+during the current search's misses. The reference changes little, and
+Eytzinger stays the fastest.
+
+\subsection{Interleaved searches}
+
+Interleaving is the largest single improvement in this study.
+With 16 keys in flight, a search costs \g{throughput}{batch16}{26}\,ns at
+512\,MiB, \gx{throughput}{reference}{batch16}{26}$\times$ less than the
+reference and \gx{throughput}{eytzinger_prefetch}{batch16}{26}$\times$ less than
+Eytzinger; in L1 it is \gx{throughput}{reference}{batch16}{12}$\times$ faster
+than the reference. The width matters (Figure~\ref{fig:batch}). At 512\,MiB a search costs
+\g{throughput}{batch4}{26}\,ns with four keys in flight,
+\g{throughput}{batch8}{26}\,ns with eight, \g{throughput}{batch16}{26}\,ns with
+sixteen and \g{throughput}{batch32}{26}\,ns with 32: beyond sixteen there is
+nothing more to gain, consistent with the 22 outstanding L1 misses the core can
+track. Explicit prefetching of each key's next probe, which
+is essential for single searches, does not help interleaved searches: with 16
+independent loads per step the core already has enough misses in flight, and
+the prefetch instructions only add work.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/batch_gcc.pdf}
+\caption{Interleaved searches by width, GCC, throughput mode, with the
+single-key branchless search with prefetching for comparison.}
+\label{fig:batch}
+\end{figure}
+
+\subsection{The prototype's assembly and SIMD variants}
+
+None of the earlier hand-written variants is worth keeping. The branching
+assembly performs like the C reference, as it should: it is the same
+algorithm. The ``pipelined'' assembly, which loads the next middle element at
+the end of each step, performs the same, because that load still depends on
+the comparison just made. The \texttt{cmov} assembly keeps an early-exit branch
+on equality and has no prefetch, so it combines the drawbacks of both styles
+and is the slowest variant beyond L3 (\g{throughput}{asm_branchless}{26}\,ns at
+512\,MiB). The AVX2 variants compare four probes at once, but the four probes
+are scattered over the array and must be loaded one by one, and they shrink
+the interval to a quarter per step instead of a half. Compiled with GCC they
+are never faster than the reference (at best
+\bsrange{gcc}{throughput}{simd_avx2}{reference}{min}$\times$ its time); they only
+beat MSVC's reference on large arrays, where that reference is slow for the
+reason given in Section~\ref{sec:compilers}.
+
+\subsection{Power-of-two sizes}
+
+The zigzag in Figures~\ref{fig:throughput} and~\ref{fig:latency} is real and
+reproducible. Searches over arrays of exactly $2^k$ elements are slower than
+over arrays of $2^{k \pm 1/2}$ elements: by up to
+\bsalias{gcc}{reference}{large}$\times$ for the reference and
+\bsalias{gcc}{batch16}{large}$\times$ for the interleaved search, measured
+against the geometric mean of the two neighbouring sizes. In an array of $2^k$
+elements the first probes sit at offsets $2^{k-1}, 2^{k-2}, \ldots$ elements,
+whose addresses agree in their low bits and therefore map to the same cache
+sets; the frequently used top of the implicit search tree competes for a few
+sets of an 8-way L1 and L2. The Eytzinger layout stores the top of the tree
+contiguously and shows no such penalty on large arrays
+(\bsalias{gcc}{eytzinger_prefetch}{large}$\times$); on small arrays it is even
+faster at powers of two (\bsalias{gcc}{eytzinger_prefetch}{small}$\times$), because
+then nearly every search takes the same number of steps and the loop exit is
+predicted. Benchmarks that only use powers of two overstate the cost of
+classic binary search; ours report both.
+
+\subsection{Compilers and if-conversion}\label{sec:compilers}\label{sec:ifconv}
+
+Whether a compiler turns a conditional into a branch or a conditional move
+(``if-conversion'') changes the performance of these kernels more than any
+other compiler difference we saw (Figure~\ref{fig:compilers}). The two compilers
+were measured in separate runs, so between 1 and 16\,MiB the figure shows the
+run-to-run variation described in Section~\ref{sec:method} rather than a
+compiler effect; the effects below lie outside that range.
+
+\paragraph{The reference search.} MSVC compiles the reference's two bound
+updates into \texttt{cmovge} instructions; GCC keeps a branch. MSVC's reference is
+therefore a branchless search without prefetching, with exactly that profile:
+faster than GCC's in the caches (\bscc{throughput}{reference}{12}$\times$ GCC's
+time at 32\,KiB) and much slower beyond L3 (\bscc{throughput}{reference}{24}$\times$
+at 128\,MiB). The same C source thus has opposite performance characteristics
+depending on the compiler, and neither is best everywhere.
+
+\paragraph{The interleaved kernel.} Our first interleaved kernel updated a
+pointer per key with a conditional select, like the branchless single search.
+GCC unrolls the loop over keys for 16 keys and emits conditional moves; for
+32 keys it does not unroll, keeps the pointers in memory and emits a
+conditional branch, which mispredicts on half of all steps. That version took
+\g{throughput}{batch32_select}{12}\,ns per search in L1, against
+\g{throughput}{batch32}{12}\,ns for the final kernel, which computes the step as
+\texttt{half \& -(a[pos + half] < key)}: there is no select left to turn into a
+branch. MSVC compiled both versions without branches. Code that depends on
+if-conversion for its performance should not leave the choice to the
+compiler's unrolling heuristics.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/compilers.pdf}
+\caption{MSVC time divided by GCC time, throughput mode; above 1, GCC's code is
+faster.}
+\label{fig:compilers}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\caption{MSVC 19.41, nanoseconds per search (median); compare Table~\ref{tab:gcc}.}
+\label{tab:msvc}
+\resizebox{\linewidth}{!}{\input{generated/table_msvc.tex}}
+\end{table}
+
+\section{What went into the library}\label{sec:library}
+
+The SpeedUp library previously routed every search to the reference. It now
+offers:
+\begin{itemize}
+\item \texttt{speedup\_binary\_search\_i64} and \texttt{speedup\_lower\_bound\_i64}:
+  the plain branchless search while the array fits the L2 size given by the
+  library's cache hint (256\,KiB by default), and the branchless search with
+  prefetching beyond it. Among all thresholds, switching at the L2 size cost
+  the least against the better of the two kernels at each size, over both
+  compilers and both modes; always prefetching would cost up to a quarter more
+  in the caches. With GCC the library takes at most
+  \bsrange{gcc}{throughput}{library}{reference}{max}$\times$ the reference's time in
+  throughput mode and \bsrange{gcc}{latency}{library}{reference}{max}$\times$ in
+  latency mode, at any size, and down to
+  \bsrange{gcc}{throughput}{library}{reference}{min}$\times$ in the caches; with
+  MSVC at most \bsrange{msvc}{throughput}{library}{reference}{max}$\times$. Eytzinger
+  order would be faster on large arrays, but it requires the caller to store the
+  data in that order.
+\item \texttt{speedup\_binary\_search\_batch\_i64} and
+  \texttt{speedup\_lower\_bound\_batch\_i64}: the interleaved kernel with 16 keys,
+  without prefetching, in the mask formulation. For callers that have many keys
+  at once, this is the fastest search of a sorted array that we measured, at
+  every size and with both compilers; only Eytzinger order, which reorders the
+  data, beats it at a few sizes in L2.
+\end{itemize}
+The library rows of Tables~\ref{tab:gcc} and~\ref{tab:msvc} were measured after
+this change, in a separate run with the same settings. The exact-match
+functions return the first occurrence of the key, which the reference did not
+guarantee. All entry points are checked against a linear
+scan in an exhaustive test (every key and gap for all sizes up to 1{,}025,
+arrays with duplicates, extreme values, and three arrays of up to four million
+elements).
+
+\section{Threats to validity}
+
+All results come from one processor, one memory configuration and one operating
+system. Zen+ has a comparatively small number of outstanding misses and a split
+L3; processors with more memory-level parallelism will favour interleaving and
+prefetching even more, and processors with a larger unified last-level cache
+will shift the crossover points. The memory ran at 2133\,MT/s, below the
+modules' rating, which raises absolute DRAM latencies. We used 4\,KiB pages;
+huge pages would remove most TLB misses on large arrays and reduce all
+large-array times, and they might also remove the run-to-run variation between
+1 and 16\,MiB. Absolute times in that range should be read as one sample of a
+distribution over memory placements; a study of that range should repeat each
+run with fresh allocations. The keys are uniform; skewed or sorted key streams make every
+variant faster and favour branchy code. Finally, each variant is one
+implementation, and other formulations may compile differently, as
+Section~\ref{sec:ifconv} shows they can.
+
+\section{Conclusion}
+
+On arrays that fit in the caches, binary search is limited by branch
+mispredictions and a branchless search wins. On larger arrays it is limited by
+memory latency, and only techniques that keep several cache misses in flight
+help: prefetching both candidates of the next step, the Eytzinger layout, or,
+best of all, interleaving many independent searches. Hand-written assembly and
+SIMD comparisons of scattered probes did not help. The most consequential
+error in our earlier study was not in any search but in the key generator, and
+the most surprising effects were outside the algorithms too: power-of-two sizes
+and compiler if-conversion each changed results by a factor of up to two or
+three.
+
+\section*{Availability}
+
+The library, the benchmark harness, the raw results and the scripts that
+produce every figure, table and number in this paper are at
+\url{https://github.com/attilatorda/SpeedUp} (AGPL-3.0):
+\begin{itemize}
+\item harness: \nolinkurl{benchmarks/binary_search/bench_bsearch.cpp};
+\item results: \nolinkurl{benchmarks/outputs/bsearch_ryzen2600x_*.csv};
+\item figures, tables and numbers: \nolinkurl{benchmarks/scripts/run_bsearch_benchmarks.py}.
+\end{itemize}
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\end{document}
