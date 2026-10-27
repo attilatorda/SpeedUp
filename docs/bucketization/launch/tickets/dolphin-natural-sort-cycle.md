@@ -1,6 +1,6 @@
 # Ticket: Dolphin natural sort is not transitive
 
-- **File at:** <https://bugs.kde.org/enter_bug.cgi?product=dolphin> (component *view-engine: general*; version *git-master*)
+- **File at:** <https://bugs.kde.org/enter_bug.cgi?product=dolphin>
 - **Search first** (product dolphin): "natural", "dotted", "decimal", "version", "411707"
 - **Re-checked:** 2026-10-24 on Dolphin master `c5849f9`, with a standalone copy of
   `KFileItemModel::stringCompare()` and of the model's sort from that commit
@@ -8,9 +8,30 @@
 - **Best edited into your own words** before posting (KDE's draft AI guidance
   asks for self-written text)
 
+## Filling in the form
+
+| Field | What to enter |
+|---|---|
+| Product | `dolphin` (already set) |
+| Reporter | your account (already set) |
+| Component | `view-engine: general` (scroll down the list, past the `panels:` entries; the sort code lives in the view engine). If it isn't listed, pick `general` |
+| Version First Reported In | `git-master` |
+| Severity | `normal` (leave as is) |
+| Platform | `Compiled Sources` if the list has it, otherwise leave `Other`: the bug was found in the source code, not in a distribution's package |
+| OS | `All` if the list has it, otherwise `Linux`. The bug is in Dolphin's own code and doesn't depend on the OS |
+| Summary | the **Summary** line below |
+| Description | delete the template text, paste the **Description** below, then check it with the Preview tab |
+| Attachment | none needed: the evidence is in the text |
+
+Then press **Submit Bug**, and put the bug's link into
+[../projects/dolphin.md](../projects/dolphin.md) and the table in
+[README.md](README.md).
+
 ---
 
-**Title:** Natural sorting is not transitive for dotted numbers since 0d10eff3; the order shown depends on listing order
+**Summary:**
+
+Natural sorting is not transitive for dotted numbers since 0d10eff3; the order shown depends on listing order
 
 **Description:**
 
@@ -36,34 +57,35 @@ order Dolphin shows for such files depends on the order they are listed in. I
 sorted the three kernel names with a copy of the model's sort from c5849f9,
 once for each of the 6 possible input orders. That gives 3 different results:
 
-| input order starts with | shown order |
-|---|---|
-| kernel-6.9.tar.xz | kernel-6.9.1, kernel-6.10, kernel-6.9 |
-| kernel-6.9.1.tar.xz | kernel-6.10, kernel-6.9, kernel-6.9.1 |
-| kernel-6.10.tar.xz | kernel-6.9, kernel-6.9.1, kernel-6.10 |
+```
+input order starts with   shown order
+kernel-6.9.tar.xz         kernel-6.9.1, kernel-6.10, kernel-6.9
+kernel-6.9.1.tar.xz       kernel-6.10, kernel-6.9, kernel-6.9.1
+kernel-6.10.tar.xz        kernel-6.9, kernel-6.9.1, kernel-6.10
+```
 
 STEPS TO REPRODUCE
 
-In the unit test: add these rows to
-`KFileItemModelTest::testStringCompare_data()`. All three pass, which means
-a < b < c < a:
+1. In Dolphin's unit test, add these rows to
+   `KFileItemModelTest::testStringCompare_data()`. All three pass, which
+   means a < b < c < a:
 
-```cpp
+```
 QTest::newRow("cycle-1") << QStringLiteral("kernel-6.10.tar.xz") << QStringLiteral("kernel-6.9.tar.xz") << true << -1;
 QTest::newRow("cycle-2") << QStringLiteral("kernel-6.9.tar.xz") << QStringLiteral("kernel-6.9.1.tar.xz") << true << -1;
 QTest::newRow("cycle-3") << QStringLiteral("kernel-6.9.1.tar.xz") << QStringLiteral("kernel-6.10.tar.xz") << true << -1;
 ```
 
-In Dolphin: create `kernel-6.9.tar.xz`, `kernel-6.9.1.tar.xz` and
-`kernel-6.10.tar.xz` in a folder and sort by name with natural sorting (the
-default). Whatever order is shown, one of the three pairs is out of order
-according to the comparison. The order can change between folders and file
-systems, because the listing order differs.
+2. In Dolphin, create `kernel-6.9.tar.xz`, `kernel-6.9.1.tar.xz` and
+   `kernel-6.10.tar.xz` in a folder and sort by name with natural sorting
+   (the default).
 
 OBSERVED RESULT
 
 The comparison is cyclic for names that mix two-part and three-part dotted
-numbers. The displayed order depends on listing order.
+numbers. Whatever order Dolphin shows, one of the three pairs is out of order
+according to the comparison. The order can differ between folders and file
+systems, because the listing order differs.
 
 EXPECTED RESULT
 
@@ -75,8 +97,10 @@ chains.
 
 SOFTWARE/OS VERSIONS
 
-Dolphin git master c5849f9 (2026-10-24). The behaviour comes from 0d10eff3
+Dolphin: git master c5849f9 (2026-10-24). The behaviour comes from 0d10eff3
 (2026-04-02).
+Operating System: any (the bug is in Dolphin's comparison code)
+KDE Frameworks / Qt: not involved in the faulty rule; checked with Qt 6.4.2
 
 ADDITIONAL INFORMATION
 

@@ -1,16 +1,38 @@
 # Ticket: Krusader's descending comparator is not a strict weak ordering
 
-- **File at:** <https://bugs.kde.org/enter_bug.cgi?product=krusader> (component *general*; version *git master*)
+- **File at:** <https://bugs.kde.org/enter_bug.cgi?product=krusader>
 - **Search first** (product krusader): "itemGreaterThan", "descending", "sort order", "strict weak"
 - **Re-checked:** 2026-10-24 on Krusader master `d20c6d0`, with a standalone copy
   of `krsort.cpp`'s comparison and `KrSort::Sorter` (not in a running Krusader)
-- **Severity:** low. The visible effect is only the order of items that compare
-  equal; the real issue is undefined behaviour in `std::stable_sort`
 - **Best edited into your own words** before posting
+
+## Filling in the form
+
+The form is the same as Dolphin's (see
+[dolphin-natural-sort-cycle.md](dolphin-natural-sort-cycle.md)), with these
+values:
+
+| Field | What to enter |
+|---|---|
+| Product | `krusader` |
+| Component | `general` |
+| Version First Reported In | the git/master entry (`git-master` or similar); if there is none, the newest release |
+| Severity | `minor`: the visible effect is only the order of items that compare equal; the real issue is undefined behaviour in `std::stable_sort` |
+| Platform | `Compiled Sources` if listed, otherwise leave `Other` |
+| OS | `All` if listed, otherwise `Linux` |
+| Summary | the **Summary** line below |
+| Description | delete the template text, paste the **Description** below, then check it with the Preview tab |
+| Attachment | none needed |
+
+Then press **Submit Bug**, and put the bug's link into
+[../projects/krusader.md](../projects/krusader.md) and the table in
+[README.md](README.md).
 
 ---
 
-**Title:** Descending sort uses a comparator that is not a strict weak ordering (undefined behaviour in std::stable_sort)
+**Summary:**
+
+Descending sort uses a comparator that is not a strict weak ordering (undefined behaviour in std::stable_sort)
 
 **Description:**
 
@@ -71,7 +93,9 @@ which breaks the folder ordering.
 
 SOFTWARE/OS VERSIONS
 
-Krusader git master d20c6d0 (2026-10-23).
+Krusader: git master d20c6d0 (2026-10-23).
+Operating System: any (the bug is in Krusader's comparison code)
+Qt: checked with Qt 6.4.2
 
 ADDITIONAL INFORMATION
 

@@ -14,8 +14,10 @@ to SpeedUp, and each carries its evidence inline. All were re-checked on
 They could not be filed from the session that prepared them. bugs.kde.org is
 not reachable from it, and it has no GitHub access outside the SpeedUp
 repository. File them from your own accounts. Each file starts with notes for
-you (where to file, what to search for first), and the ticket text follows
-the `---` line.
+you: where to file, what to search for first and, for bugs.kde.org, what to
+pick in each field of the form. The text to paste follows the `---` line:
+**Summary** goes into the one-line Summary field, **Description** replaces
+the template text in the Description box.
 
 **Not filed: the KDE file dialogs' folder counting.**
 `KDirModel::data(ChildCountRole)` counts a local folder's entries with
