@@ -37,19 +37,23 @@ Done on 2026-10-27:
 
 - [x] release date set to **2026-10-27**: `CITATION.cff` at the repository
       root and the 0.2.0 heading in [CHANGELOG.md](../../../CHANGELOG.md)
-- [x] the branch merged into `main` (pull request)
+- [x] the branch merged into `main` (pull request #1)
+- [x] **the repository is public** (2026-10-27): this is the publication
+      date of the design
 
-Still yours, in this order (these need your GitHub account, the KDE, GNOME
-and Xfce accounts, or the repository settings):
+Still yours, in this order. Steps 1–4 need only your GitHub account:
 
-1. **Tags:** `v0.1.0` on commit `a6e6d06` (the binary-search release) and
-   `v0.2.0` on the merged `main`.
-2. **Repository public**, then publish the GitHub release `v0.2.0` with the
-   release notes from `out/announcement.md`.
-3. **Software Heritage:** save the repository and note the SWHID.
-4. **Posts:** re-check the AI policies, search each tracker for duplicates,
-   then post from `out/projects/` in the [order below](#order-of-posting-on-launch-day).
-   The three bug tickets are separate ([TODO.md](TODO.md)).
+1. **Release `v0.2.0`** on `main`, with the release notes from
+   `out/announcement.md`. Until it exists, the design and benchmark links in
+   the posts (which point to the tag) return 404, so do this before posting.
+2. **Tag `v0.1.0`** on commit `a6e6d06` (the binary-search release), for the
+   changelog's comparison link.
+3. **Software Heritage:** save the repository at
+   <https://archive.softwareheritage.org/save/> and note the SWHID.
+4. **Posts on GitHub:** Nemo, Caja, PCManFM-Qt (libfm-qt), yazi and,
+   optionally, nnn. Re-check each AI policy and search for duplicates first.
+5. **Posts that need new accounts** (KDE Discuss, Thunar, Nautilus) are in
+   [TODO.md](TODO.md), for later. So are the three bug tickets.
 
 Decided:
 
@@ -163,6 +167,11 @@ The bug tickets for Dolphin, Krusader and lf were filed on 2026-10-27, before
 the launch ([tickets/](tickets/)). They are **not part of launch day**: no
 launch post depends on them or links to them, and following them up is a
 separate to-do ([TODO.md](TODO.md)). Order:
+
+(No new accounts were made for launch day, so the GitHub posts, items 2, 4,
+5 and 6 for Nemo, Caja, PCManFM-Qt, yazi and nnn, go first. The KDE Discuss,
+Thunar and Nautilus posts follow once those accounts exist; see
+[TODO.md](TODO.md).)
 
 1. **KDE**: one KDE Discuss post covering Dolphin, the file dialogs (KIO) and
    Krusader, with the numbers. Ask whether a benchmark merge request for

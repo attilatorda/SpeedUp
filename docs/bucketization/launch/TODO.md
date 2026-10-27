@@ -1,5 +1,21 @@
 # To do later
 
+## Launch posts that need accounts
+
+The repository went public on 2026-10-27 and the GitHub posts went first.
+These need accounts that didn't exist on launch day:
+
+- [ ] **KDE Discuss** post ([projects/kde-discuss.md](projects/kde-discuss.md)):
+      a KDE Identity account (<https://invent.kde.org>)
+- [ ] **Thunar** issue ([projects/thunar.md](projects/thunar.md)): a
+      gitlab.xfce.org account; new accounts can need approval, so sign up a
+      few days ahead
+- [ ] **Nautilus** issue ([projects/nautilus.md](projects/nautilus.md)): a
+      gitlab.gnome.org account
+
+The posts say "released today"; change that to the release date
+(2026-10-27) when posting later.
+
 ## URGENT: follow up on the three filed bug tickets
 
 Filed on 2026-10-27, before the launch. They don't mention Bucketization,
