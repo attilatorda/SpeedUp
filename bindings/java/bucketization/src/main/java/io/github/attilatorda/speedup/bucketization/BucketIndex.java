@@ -31,7 +31,7 @@ import java.util.function.Predicate;
  *
  * @param <T> element type
  */
-public final class BucketIndex<T> implements Bucketization<T> {
+public final class BucketIndex<T> implements BucketedList<T> {
 
     private BucketPlan plan;
     private Object[] items = new Object[16];

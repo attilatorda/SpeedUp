@@ -69,7 +69,7 @@ int natural_compare(std::string_view a, std::string_view b) {
     return (c > 0) - (c < 0);
 }
 
-void print_page(bz::Bucketization<Entry>& view, std::size_t rows) {
+void print_page(bz::BucketedList<Entry>& view, std::size_t rows) {
     const auto start = std::chrono::steady_clock::now();
     const std::vector<Entry> page = view.range(0, rows);
     const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - start).count();

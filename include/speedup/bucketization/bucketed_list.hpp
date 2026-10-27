@@ -1,7 +1,7 @@
 #pragma once
-/// @file bucketization.hpp
-/// The Bucketization interface: fast re-sorting of a collection that can be
-/// ordered in several ways.
+/// @file bucketed_list.hpp
+/// BucketedList, the Bucketization interface: fast re-sorting of a
+/// collection that can be ordered in several ways.
 
 #include <cstddef>
 #include <functional>
@@ -53,13 +53,13 @@ struct BucketStats {
 /// thread-safe. Elements must not be changed in a way that affects their
 /// order except through `update_if`.
 template <class T>
-class Bucketization {
+class BucketedList {
 public:
     using Predicate = std::function<bool(const T&)>;
     using Mutator = std::function<void(T&)>;
     using Visitor = std::function<void(const T&)>;
 
-    virtual ~Bucketization() = default;
+    virtual ~BucketedList() = default;
 
     // --- sort keys -------------------------------------------------------
 

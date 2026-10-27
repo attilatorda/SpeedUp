@@ -29,10 +29,13 @@ Related documents:
 - [kde-contribution-plan.md](kde-contribution-plan.md): steps towards a Dolphin contribution
 - [launch/README.md](launch/README.md): the launch-day contribution plan and a ready kit per project
 
-> **Name.** The interface is called `Bucketization`. "Bucketisation" (British
-> spelling) is just as correct; the `-ize` form matches the conventions of
-> Java, Qt/KDE and most libraries that use the term (TensorFlow's
-> `bucketize`, Spark's `Bucketizer`).
+> **Name.** The design is called Bucketization; "Bucketisation" (British
+> spelling) is just as correct, and the `-ize` form matches the conventions
+> of Java, Qt/KDE and most libraries that use the term (TensorFlow's
+> `bucketize`, Spark's `Bucketizer`). The interface is `BucketedList<T>`: a
+> noun for the container, as with `List` and `Map`, and the implementation
+> is `BucketIndex<T>`. Names ending in `-able` (`Comparable`, `Iterable`)
+> would describe a capability of the elements instead.
 
 ---
 
@@ -100,7 +103,7 @@ conventions.
 
 | Purpose | C++ (`speedup::bucketization`) | Java (`io.github.attilatorda.speedup.bucketization`) |
 |---------|------|------|
-| interface / implementation | `Bucketization<T>` / `BucketIndex<T>` | `Bucketization<T>` / `BucketIndex<T>` |
+| interface / implementation | `BucketedList<T>` / `BucketIndex<T>` | `BucketedList<T>` / `BucketIndex<T>` |
 | register a sort key | `add_sort_key(SortKey<T>)` | `addSortKey(SortKey<T>)` |
 | folders first in both directions | `SortKey::with_groups(n, fn)` | `SortKey.withGroups(n, fn)` |
 | choose the order | `sort_by(name, Direction)`, `unsort()` | `sortBy(name, Direction)`, `unsort()` |

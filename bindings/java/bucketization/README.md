@@ -1,7 +1,8 @@
 # SpeedUp Bucketization for Java
 
-Pure-Java implementation of the `Bucketization` interface: fast re-sorting of
-a collection that can be ordered in several ways (name, size, date, ...).
+Pure-Java implementation of Bucketization (the `BucketedList` interface):
+fast re-sorting of a collection that can be ordered in several ways (name,
+size, date, ...).
 Java 17+, no runtime dependencies.
 
 Design, guarantees and the cross-language specification:
@@ -34,7 +35,7 @@ List<FileItem> rows = files.range(0, visibleRows); // sorts only the bucket(s) o
 
 | Class | Role |
 |-------|------|
-| `Bucketization<T>` | the interface |
+| `BucketedList<T>` | the interface |
 | `BucketIndex<T>` | reference implementation |
 | `SortKey<T>` | a sort criterion: `ofLong`, `ofDouble`, `ofString`, `ofStringIgnoreCase`, `ofCollated`, `ofKey`, `ofComparator`; `withGroups` keeps folders first in both directions |
 | `Keys` | order-preserving 64-bit key encodings for custom keys |

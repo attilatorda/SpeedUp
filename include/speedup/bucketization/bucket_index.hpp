@@ -1,6 +1,6 @@
 #pragma once
 /// @file bucket_index.hpp
-/// Reference implementation of the Bucketization interface.
+/// Reference implementation of BucketedList, the Bucketization interface.
 
 #include <algorithm>
 #include <cstddef>
@@ -13,7 +13,7 @@
 #include <utility>
 #include <vector>
 
-#include "speedup/bucketization/bucketization.hpp"
+#include "speedup/bucketization/bucketed_list.hpp"
 
 namespace speedup::bucketization {
 
@@ -29,11 +29,11 @@ namespace speedup::bucketization {
 /// Use a cheap-to-copy element type (a pointer, an id, a shared handle) when
 /// elements are large; range() returns copies.
 template <class T>
-class BucketIndex final : public Bucketization<T> {
+class BucketIndex final : public BucketedList<T> {
 public:
-    using typename Bucketization<T>::Predicate;
-    using typename Bucketization<T>::Mutator;
-    using typename Bucketization<T>::Visitor;
+    using typename BucketedList<T>::Predicate;
+    using typename BucketedList<T>::Mutator;
+    using typename BucketedList<T>::Visitor;
 
     explicit BucketIndex(BucketPlan plan = BucketPlan::defaults()) : plan_(std::move(plan)) {}
 

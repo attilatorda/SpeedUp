@@ -32,8 +32,9 @@ If NASM is not installed, ASM paths are disabled automatically and C/C++ fallbac
 
 ## Bucketization: fast re-sorting by several keys
 
-`Bucketization` is an interface for collections that can be sorted in several
-ways (a file manager's name / size / modified / last-used columns). Every
+Bucketization is a design for collections that can be sorted in several
+ways (a file manager's name / size / modified / last-used columns); its
+interface is `BucketedList<T>`, implemented by `BucketIndex<T>`. Every
 element picks a bucket per sort key once, when it is added. Switching the sort
 column then only regroups by bucket id, and only the bucket on screen gets
 sorted.

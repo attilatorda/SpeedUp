@@ -27,7 +27,7 @@ import java.util.function.Predicate;
  *
  * @param <T> element type
  */
-public interface Bucketization<T> extends Iterable<T> {
+public interface BucketedList<T> extends Iterable<T> {
 
     // --- sort keys ---------------------------------------------------------
 
