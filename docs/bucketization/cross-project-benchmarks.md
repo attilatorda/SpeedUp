@@ -94,8 +94,9 @@ of every project fits.
 | **Godot** (editor FileSystem dock) | large for type sorts in big folders; none for name and date (already fast) | first click slower in 6 of 24 big-folder cases; policy forbids AI-written code and text | yes (MIT) | none on launch day | **on hold** (benchmarks kept) |
 
 The ranking for a same-day launch is in [launch/README.md](launch/README.md).
-The bug reports and lf's normalization fix go first: they help the projects
-even if Bucketization is never merged.
+The bug reports and lf's normalization issue were filed before the launch
+(2026-10-27): they help the projects even if Bucketization is never merged,
+and the launch does not depend on them.
 
 ## What was measured
 

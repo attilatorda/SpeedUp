@@ -6,7 +6,7 @@
 | Account | KDE Identity |
 | License | Dolphin and Krusader GPL-2.0-or-later; KIO's `kdirsortfilterproxymodel.cpp` LGPL-2.0-only. Bucketization under MIT fits all three |
 | AI policy (2026-10-24) | no adopted KDE-wide policy; the draft allows AI-assisted code under human review and asks for self-written commit messages and MR descriptions. **Write this post yourself; the draft is the facts** |
-| When | after the Dolphin and Krusader bug reports, so you can link them |
+| When | first launch-day post (T0 + 30 min). It doesn't depend on the bug tickets |
 
 ## Numbers
 
@@ -39,9 +39,7 @@ rows are final after a column click:
 > directions. Every resulting order is checked against the project's own
 > comparison (Dolphin: exact match wherever its comparison is consistent).
 >
-> **Found on the way:** two bug reports filed today, Dolphin's natural sort
-> cycles ([bug link]) and Krusader's descending comparator ([bug link]).
-> Two more observations:
+> **Found on the way:**
 > - `KDirModel::data(ChildCountRole)` counts a local folder's entries with
 >   `readdir()` the first time a size sort compares it, synchronously inside
 >   the sort;

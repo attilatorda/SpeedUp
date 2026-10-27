@@ -26,14 +26,15 @@ work is useful even if a later step is not accepted. Numbers come from
   The Dolphin patches need Qt/KDE style anyway, so writing them yourself from
   the spec also makes the authorship clearly yours.
 
-## Step 1: report the natural-sort cycle (bug report)
+## Step 1: report the natural-sort cycle (bug report, filed)
 
 Dolphin's natural comparison is not transitive for version numbers, so their
 order depends on the order the folder was listed in. The cycle comes from
 `0d10eff3` (2026-04-02, BUG 411707). The ready-to-file report, re-checked on
 current master, is
 [launch/tickets/dolphin-natural-sort-cycle.md](launch/tickets/dolphin-natural-sort-cycle.md).
-It doesn't mention Bucketization, so it can be filed before the launch. A fix
+It doesn't mention Bucketization and was filed on 2026-10-27, before the
+launch; following it up is in [launch/TODO.md](launch/TODO.md). A fix
 has to pick one rule for two- vs three-part numbers. That is a design
 decision for the maintainers, so offer a patch only once they say which rule
 they want.

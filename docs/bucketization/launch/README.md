@@ -25,7 +25,7 @@ Numbers come from [../cross-project-benchmarks.md](../cross-project-benchmarks.m
 - **Priority is the dated public release, not the posts.** The tagged GitHub
   release establishes that the design is yours and when it appeared. So do its
   archived copies: Software Heritage, with a permanent timestamped ID, and
-  optionally Zenodo, with a DOI. Posting in eleven trackers on the same day
+  optionally Zenodo, with a DOI. Posting in eight trackers on the same day
   does not add to that. It gets the projects talking to you while the release
   is new.
 - **Claim the design, not the building blocks.** Bucket sort, sample sort,
@@ -125,35 +125,30 @@ would have to change before contributing. It gets no launch-day post.
 
 ## Order of posting on launch day
 
-In each kit, the first post is the one that is useful to the project even if
-Bucketization is never merged. Order:
+The bug tickets for Dolphin, Krusader and lf were filed on 2026-10-27, before
+the launch ([tickets/](tickets/)). They are **not part of launch day**: no
+launch post depends on them or links to them, and following them up is a
+separate to-do ([TODO.md](TODO.md)). Order:
 
-1. **KDE Dolphin**: bug report about the non-transitive natural sort.
-2. **KDE Krusader**: bug report about the descending comparator that is not a
-   strict weak ordering.
-3. **lf**: issue about normalizing names on every comparison. Normalizing
-   once per sort makes name sorting 4–8× faster with the same order.
-
-   Items 1–3 were filed on 2026-10-27, before the launch. They don't mention
-   Bucketization ([tickets/](tickets/)). On launch day, only link to them
-   from the other posts.
-4. **KDE**: one KDE Discuss post covering Dolphin, the file dialogs (KIO) and
+1. **KDE**: one KDE Discuss post covering Dolphin, the file dialogs (KIO) and
    Krusader, with the numbers. Ask whether a benchmark merge request for
    Dolphin is welcome.
-5. **Thunar**, **Nemo**, **Caja**: issues proposing Bucketization for their
+2. **Thunar**, **Nemo**, **Caja**: issues proposing Bucketization for their
    list models, each with its own numbers.
-6. **Nautilus**: issue (the sort lives in GTK's `GtkSortListModel`, so this is
+3. **Nautilus**: issue (the sort lives in GTK's `GtkSortListModel`, so this is
    a discussion first).
-7. **PCManFM-Qt** (libfm-qt): issue with numbers.
-8. **yazi**: feature request issue, **written by you** (yazi's AI policy
+4. **PCManFM-Qt** (libfm-qt): issue with numbers.
+5. **yazi**: feature request issue, **written by you** (yazi's AI policy
    requires human-written issue text, and a maintainer must approve the design
    before any PR).
-9. **nnn**: optional, low priority (small gains on typical folders).
+6. **nnn**: optional, low priority (small gains on typical folders).
 
-Godot is not in this list: it is on hold (see [Drop rules](#drop-rules)).
+lf gets no launch-day post: its first step is the filed ticket, and a
+Bucketization issue can follow once that is settled. Godot is not in this
+list either: it is on hold (see [Drop rules](#drop-rules)).
 
 Space the posts out over the day. Make each one project-specific, not one
-text pasted eleven times. Projects notice cross-posting, and some treat it as
+text pasted eight times. Projects notice cross-posting, and some treat it as
 spam.
 
 ## Before launch day (T-7 to T-1)
@@ -185,7 +180,7 @@ spam.
 - [ ] **Duplicates:** search each tracker for an existing report of the same
       issue (the links are in the kits).
 - [ ] **Fresh numbers:** re-run against current upstream sources if they have
-      moved, at least for Dolphin and lf, whose posts quote exact behaviour:
+      moved, at least for Dolphin, whose post quotes exact behaviour:
       `python3 benchmarks/scripts/run_bucketization_benchmarks.py --build build --quick`
 - [ ] **Release prepared:**
   - choose the tag and date;
@@ -232,9 +227,8 @@ unfilled. The `out/` folder is git-ignored.
 | T0 | Make the repository public (if it is not), push the release commit, publish the GitHub release `<RELEASE_TAG>` |
 | T0 + 5 min | Save the repository on Software Heritage ("Save code now" at archive.softwareheritage.org); note the SWHID. Zenodo mints the DOI by itself if enabled |
 | T0 + 10 min | Re-run `fill_placeholders.py` with `--doi`/`--swh` if you have them |
-| T0 + 30 min | Posts 1–3 (the two bug reports, the lf issue) |
-| T0 + 2 h | Post 4 (KDE Discuss) |
-| T0 + 3–5 h | Posts 5–8 |
+| T0 + 30 min | Post 1 (KDE Discuss) |
+| T0 + 2–5 h | Posts 2–6 (Thunar, Nemo, Caja, Nautilus, PCManFM-Qt, yazi; nnn optional) |
 | T0 + 1 day | Answer every reply. Nothing else is due |
 
 ## After launch day

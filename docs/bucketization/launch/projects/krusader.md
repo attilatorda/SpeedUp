@@ -7,7 +7,7 @@
 | License | GPL-2.0-or-later. Bucketization under MIT fits |
 | AI policy (2026-10-24) | as for KDE in general (see [dolphin.md](dolphin.md)). Disclose |
 | Fit | high. Krusader owns its sort (`KrSort::Sorter`), and its comparison is expensive (`localeAwareCompare` on lowercased copies of the names) |
-| First post | the bug report in [../tickets/](../tickets/), filed before launch. Performance goes into the KDE Discuss post |
+| First post | the KDE Discuss post on launch day (performance). The bug report was filed on 2026-10-27 and is not part of the launch ([../TODO.md](../TODO.md)) |
 
 ## Numbers
 
@@ -28,10 +28,10 @@ modified, ascending and descending.
 | photos-100k | 100,000 | 282–801 | 0.074–0.25 | 2,807–4,207× | 1.9–68 |
 <!-- /numbers -->
 
-## Bug report (file before launch)
+## Bug report (filed 2026-10-27, not part of the launch)
 
-The ready-to-file text is in [../tickets/krusader-descending-comparator.md](../tickets/krusader-descending-comparator.md).
-It doesn't mention Bucketization, so it can go out before the launch. The
+The text as prepared is in [../tickets/krusader-descending-comparator.md](../tickets/krusader-descending-comparator.md).
+It doesn't mention Bucketization. Following it up is in [../TODO.md](../TODO.md). The
 fix it proposes is `return !itemLessThan(sp, sp2) && itemLessThan(sp2, sp);`.
 The simpler `itemLessThan(sp2, sp)` breaks "always sort dirs by name"; the
 ticket explains why.

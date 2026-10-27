@@ -7,7 +7,7 @@
 | License | GPL-2.0-or-later. Bucketization under MIT fits |
 | AI policy (2026-10-24) | KDE has no adopted policy. The draft under discussion (September 2026) allows AI-assisted code under human review, lets maintainers close "obvious and lazy" LLM contributions, and asks you to write commit messages and merge request descriptions yourself. **Disclose; write the bug report and MR text yourself** |
 | Fit | **highest**: the largest measured gains, and the stack the design was made for |
-| First post | the bug report in [../tickets/](../tickets/), filed before launch; the KDE Discuss post on launch day |
+| First post | the KDE Discuss post on launch day. The bug report was filed on 2026-10-27 and is not part of the launch ([../TODO.md](../TODO.md)) |
 | Step-by-step | [../../kde-contribution-plan.md](../../kde-contribution-plan.md) |
 
 ## Numbers
@@ -22,10 +22,10 @@ code on Qt 6.4.2 and ICU 74):
 | Opening a folder (name order, sorting only) | 208–434 ms | 13–40 ms |
 | 1,000,000 entries, names | 8.9 s | 4.3 ms |
 
-## Bug report (file before launch)
+## Bug report (filed 2026-10-27, not part of the launch)
 
-The ready-to-file text is in [../tickets/dolphin-natural-sort-cycle.md](../tickets/dolphin-natural-sort-cycle.md).
-It doesn't mention Bucketization, so it can go out before the launch. The cycle
+The text as prepared is in [../tickets/dolphin-natural-sort-cycle.md](../tickets/dolphin-natural-sort-cycle.md).
+It doesn't mention Bucketization. Following it up is in [../TODO.md](../TODO.md). The cycle
 comes from commit `0d10eff3` (2026-04-02, BUG 411707), which added the
 decimal and version rules for dotted numbers. The ticket includes three
 `testStringCompare` rows that all pass today, which shows the cycle in
