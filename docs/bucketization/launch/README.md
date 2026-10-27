@@ -20,6 +20,32 @@ prepared so that launch day is mostly copy, check and post.
 Numbers come from [../cross-project-benchmarks.md](../cross-project-benchmarks.md)
 (per project) and [../benchmarks.md](../benchmarks.md) (Dolphin in depth).
 
+## Readiness (checked 2026-10-27)
+
+Ready:
+
+- [x] C++ and Java build, their tests pass, and every benchmark target builds
+- [x] every number table in the kits matches the benchmark results
+      (`update_numbers.py` changes nothing)
+- [x] `fill_placeholders.py` fills every placeholder in a test run, and its
+      links to the design and benchmark docs point to files that exist
+- [x] no broken relative links in the repository's Markdown files
+- [x] launch day no longer depends on the bug tickets (filed 2026-10-27);
+      following them up is in [TODO.md](TODO.md)
+
+Still yours to decide or do, in this order (details in
+[Before launch day](#before-launch-day-t-7-to-t-1)):
+
+1. **License:** add MIT (or LGPL) for the Bucketization sources. The posts
+   offer code to GPL, LGPL and MIT projects, which can't take AGPL-3.0. Then
+   change `license:` in [CITATION.cff.template](CITATION.cff.template) to
+   match.
+2. **Patent decision**, before anything is public (see the note below).
+3. **Tag and date** for the release, then the [runbook](#runbook-commands):
+   merge the branch into `main`, fill the placeholders, tag, release.
+4. **On the day:** re-check the AI policies and search each tracker for
+   duplicates.
+
 ## What a same-day launch does and does not give you
 
 - **Priority is the dated public release, not the posts.** The tagged GitHub
