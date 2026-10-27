@@ -13,7 +13,7 @@ Design, guarantees and the cross-language specification:
 ```bash
 cd bindings/java/bucketization
 mvn test        # unit, randomized and cross-language golden tests
-mvn package     # target/speedup-bucketization-0.1.0-SNAPSHOT.jar
+mvn package     # target/speedup-bucketization-0.2.0.jar
 ```
 
 ## Usage

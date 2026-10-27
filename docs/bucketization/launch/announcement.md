@@ -10,7 +10,7 @@ from a fresh run.
 
 ## GitHub release notes (`<RELEASE_TAG>`)
 
-**Title:** Bucketization: fast re-sorting for multi-column views
+**Title:** v0.2.0: Bucketization, fast re-sorting for multi-column views
 
 Bucketization is a sorting design for views that can be sorted by several
 columns, such as a file manager's name, size and date columns. Designed by
@@ -47,6 +47,8 @@ In every case Bucketization's order is sorted under the file manager's own
 comparison function. Along the way the benchmarks found a non-transitive
 natural sort in Dolphin and a comparator that is not a strict weak ordering in
 Krusader. Both have been reported upstream.
+
+All changes since v0.1.0 (the optimized binary search): see `CHANGELOG.md`.
 
 <DOI_LINE>
 

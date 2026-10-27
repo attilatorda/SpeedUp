@@ -5,7 +5,7 @@ Run this right after the SpeedUp release is public:
 
     python3 docs/bucketization/launch/fill_placeholders.py \
         --name "Given Family" --repo https://github.com/attilatorda/SpeedUp \
-        --tag v0.2.0 --date 2026-11-01 [--doi 10.5281/zenodo.NNNNNNN] [--swh swh:1:rev:...]
+        --date 2026-11-01 [--doi 10.5281/zenodo.NNNNNNN] [--swh swh:1:rev:...]
 
 Output: docs/bucketization/launch/out/ (git-ignored), one file per input file,
 plus CITATION.cff ready for the repository root. Unfilled placeholders are
@@ -24,7 +24,7 @@ def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--name", required=True, help='your name as it should appear, e.g. "Attila Torda"')
     p.add_argument("--repo", required=True, help="public repository URL, without a trailing slash")
-    p.add_argument("--tag", required=True, help="release tag, e.g. v0.2.0")
+    p.add_argument("--tag", default="v0.2.0", help="release tag (default: v0.2.0)")
     p.add_argument("--date", required=True, help="release date, YYYY-MM-DD")
     p.add_argument("--branch", default=None, help="branch or tag for links (default: the tag)")
     p.add_argument("--doi", default="", help="Zenodo DOI of the release, if you made one")

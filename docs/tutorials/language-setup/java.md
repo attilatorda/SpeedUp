@@ -7,7 +7,7 @@ TODO: usage with SpeedUp C ABI.
 ```bash
 cd bindings/java/bucketization
 mvn test
-mvn package   # target/speedup-bucketization-0.1.0-SNAPSHOT.jar
+mvn package   # target/speedup-bucketization-0.2.0.jar
 ```
 
 ```java

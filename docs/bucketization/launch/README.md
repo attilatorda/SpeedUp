@@ -37,10 +37,9 @@ Still yours to decide or do, in this order (details in
 [Before launch day](#before-launch-day-t-7-to-t-1)):
 
 1. **Merge** the branch into `main` (planned for 2026-10-27).
-2. **Pick a version number and a release date.** The version number (the
-   "tag", for example `v0.2.0`) names the release on GitHub; the date is the
-   day you make the repository public and publish it. Both go into the
-   commands in the [runbook](#runbook-commands).
+2. **Pick the release date:** the day you make the repository public and
+   publish the release. It goes into the commands in the
+   [runbook](#runbook-commands).
 3. **On the day:** re-check the AI policies and search each tracker for
    duplicates.
 
@@ -51,6 +50,10 @@ Decided:
       every project in this plan (and the libraries its sort lives in) use
       the Bucketization code, and ports of it, under its own license.
 - [x] **No patents** (2026-10-27).
+- [x] **Version: `v0.2.0`.** `v0.1.0` (2026-05-14) was the first release, the
+      optimized binary search. The changes are in
+      [CHANGELOG.md](../../../CHANGELOG.md), and the build files already say
+      0.2.0.
 
 ## What a same-day launch does and does not give you
 
@@ -202,8 +205,10 @@ spam.
       moved, at least for Dolphin, whose post quotes exact behaviour:
       `python3 benchmarks/scripts/run_bucketization_benchmarks.py --build build --quick`
 - [ ] **Release prepared:**
-  - choose the tag and date;
-  - run `fill_placeholders.py` with them;
+  - choose the date (the tag is `v0.2.0`);
+  - run `fill_placeholders.py` with it;
+  - in [CHANGELOG.md](../../../CHANGELOG.md), replace `unreleased` in the
+    0.2.0 heading with the date;
   - copy `out/CITATION.cff` to the repository root and commit it, so it is in
     the tagged commit;
   - draft the release from `out/announcement.md`.
@@ -217,13 +222,14 @@ The work lives on the branch `claude/bucketisation-sorting-interface-xjfpek`.
 Merge it into `main` first (pull request), then:
 
 ```bash
-# T-1: numbers and placeholders (use the tag and date you will release with)
+# T-1: numbers and placeholders (use the date you will release on; the tag is v0.2.0)
 python3 benchmarks/scripts/run_bucketization_benchmarks.py --build build --quick   # optional refresh
 python3 docs/bucketization/launch/update_numbers.py                               # tables in the kits
 python3 docs/bucketization/launch/fill_placeholders.py \
     --name "Your Name" --repo https://github.com/attilatorda/SpeedUp --tag v0.2.0 --date 2026-11-01
 cp docs/bucketization/launch/out/CITATION.cff .
-git add CITATION.cff docs/bucketization && git commit -m "Add citation metadata for the Bucketization release"
+sed -i 's/^## \[0.2.0\] - unreleased/## [0.2.0] - 2026-11-01/' CHANGELOG.md
+git add CITATION.cff CHANGELOG.md docs/bucketization && git commit -m "Release v0.2.0: citation metadata and changelog date"
 git tag -a v0.2.0 -m "Bucketization"
 git push origin main v0.2.0
 
