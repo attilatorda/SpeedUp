@@ -12,6 +12,7 @@ prepared so that launch day is mostly copy, check and post.
 | [announcement.md](announcement.md) | GitHub release notes and a short announcement |
 | [projects/](projects/) | one kit per project: where to post, account, license, AI policy, the post itself, follow-ups (Godot's kit is on hold) |
 | [tickets/](tickets/) | bug tickets for Dolphin, Krusader and lf, filed 2026-10-27, without mentioning Bucketization |
+| [TODO.md](TODO.md) | **urgent:** add the ticket links and follow up on replies; not needed for the launch |
 | [CITATION.cff.template](CITATION.cff.template) | citation metadata for the repository root |
 | [fill_placeholders.py](fill_placeholders.py) | fills `<RELEASE_URL>`, `<YOUR_NAME>` and the other placeholders into ready-to-paste copies |
 | [update_numbers.py](update_numbers.py) | refreshes every number table in the kits after a benchmark re-run |
