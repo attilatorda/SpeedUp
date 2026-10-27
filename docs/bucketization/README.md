@@ -21,6 +21,11 @@ Implementations:
 The last part of this document is the cross-language specification that
 other ports (Python, C#, Rust, Kotlin, ...) follow.
 
+License: AGPL-3.0, like the rest of SpeedUp. An additional permission lets
+Dolphin, KIO, Krusader, Thunar, Nemo, Caja, Nautilus, GLib, GTK, PCManFM-Qt,
+libfm-qt, yazi, lf, nnn and Godot use the code, and ports of it, under their
+own licenses: [../../LICENSE-EXCEPTION-Bucketization.md](../../LICENSE-EXCEPTION-Bucketization.md).
+
 Related documents:
 
 - [benchmarks.md](benchmarks.md): measured against Dolphin's and GNOME's real sorting code on real folders

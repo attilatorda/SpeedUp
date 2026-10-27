@@ -42,6 +42,9 @@ sorted.
 - C++17, header-only: `include/speedup/bucketization.hpp` (CMake target `speedup::bucketization`)
 - Java 17: `bindings/java/bucketization/` (Maven)
 - Design and cross-language spec: `docs/bucketization/README.md`
+- License: AGPL-3.0, like the rest of SpeedUp, with an exception that lets the
+  file managers it was benchmarked against (and their libraries) use it under
+  their own licenses: [LICENSE-EXCEPTION-Bucketization.md](LICENSE-EXCEPTION-Bucketization.md)
 
 ```cpp
 #include "speedup/bucketization.hpp"
