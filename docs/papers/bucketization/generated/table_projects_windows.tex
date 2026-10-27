@@ -1,0 +1,10 @@
+\begin{tabular}{lrrrrrr}
+\toprule
+Project & Re-sort today (ms) & Switch + page (ms) & Speed-up & Pre-sort, once (ms) & First click slower & Valid orders\\
+\midrule
+nnn & 36--2{,}257 & 0.14--0.69 & 145--4{,}639$\times$ & 2.6--285 & 0/18 & 32/42\\
+yazi (native Rust) & 7.7--67 & 0.089--0.43 & 40--286$\times$ & 1.3--16 & 0/24 & 42/42\\
+lf (C++ port) & 4.0--1{,}904 & 0.080--1.2 & 8.8--6{,}503$\times$ & 1.1--336 & 0/24 & 42/42\\
+Godot & 3.6--2{,}391 & 0.13--6.4 & 5.2--879$\times$ & 1.6--2{,}510 & 8/24 & 36/36\\
+\bottomrule
+\end{tabular}

@@ -42,7 +42,12 @@ won.
   `-DBENCH_LEGACY_RAND` restores the old generator.
 - The Bucketization benchmarks build on Windows (nnn's entry struct used
   POSIX-only types); `run_bucketization_benchmarks.py --tag` keeps the results
-  of other machines apart.
+  of other machines apart, carries on when a benchmark reports invalid orders,
+  and reads CSVs with CRLF line endings. Summary timings now cover valid orders
+  only. Windows results: `docs/bucketization/benchmarks.md`.
+- `speedup_check_strxfrm`: checks that `strxfrm()` orders like `strcoll()`.
+  The Windows C runtime does not in its English locales, which makes nnn's
+  name key unusable there.
 
 ## [0.2.0] - 2026-10-27
 

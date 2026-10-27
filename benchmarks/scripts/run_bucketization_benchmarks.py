@@ -18,7 +18,9 @@ Usage:
     run_bucketization_benchmarks.py --report-only      # tables from existing CSVs
     run_bucketization_benchmarks.py --only-projects    # step 3 only
 
---quick skips the 1,000,000-entry dataset. --extra adds your own listings
+--tag NAME writes every CSV and the summary with a _NAME suffix (e.g.
+--tag windows_ryzen2600x), so a run on another machine keeps the reference
+results. --quick skips the 1,000,000-entry dataset. --extra adds your own listings
 (made with benchmarks/datasets/capture_listing.py). The per-project benchmarks
 skip datasets above --max-entries (default 200,000): the 1,000,000-entry case
 is covered by the Dolphin and GLib benchmarks.
@@ -56,6 +58,27 @@ ORDER = ["usr-bin", "usr-lib", "node-modules-top", "node-modules-tree", "usr-tre
          "photos-100k", "photos-1m"]
 
 
+def apply_tag(tag):
+    """Gives every output file a _TAG suffix."""
+    global DOLPHIN_CSV, GLIB_CSV, REPORT
+
+    def tagged(path):
+        stem, ext = os.path.splitext(path)
+        return f"{stem}_{tag}{ext}"
+
+    DOLPHIN_CSV, GLIB_CSV, REPORT = tagged(DOLPHIN_CSV), tagged(GLIB_CSV), tagged(REPORT)
+    for table in (FAMILY_CSV, NATIVE_CSV):
+        for key in table:
+            table[key] = tagged(table[key])
+
+
+def executable(path):
+    """The path itself, or with .exe on Windows."""
+    if not os.path.exists(path) and os.path.exists(path + ".exe"):
+        return path + ".exe"
+    return path
+
+
 def prepare_datasets(build, quick):
     target = os.path.join(build, "bucketization-datasets")
     os.makedirs(target, exist_ok=True)
@@ -77,12 +100,16 @@ def prepare_datasets(build, quick):
 
 
 def run(binary, csv_path, repeats, datasets, extra_args=()):
+    binary = executable(binary)
     if not os.path.exists(binary):
         print(f"skipping {os.path.basename(binary)} (not built)")
         return False
     cmd = [binary, "--repeats", str(repeats), "--csv", csv_path, *extra_args, *datasets]
     print("running", " ".join(os.path.basename(c) if c.startswith("/") else c for c in cmd))
-    subprocess.run(cmd, check=True)
+    # Exit status 1 means some order failed its check; the CSV records which,
+    # so the remaining benchmarks still run.
+    if subprocess.run(cmd).returncode != 0:
+        print(f"warning: {os.path.basename(binary)} reported invalid orders; see {os.path.relpath(csv_path, ROOT)}")
     return True
 
 
@@ -94,13 +121,16 @@ def build_native(build):
     if shutil.which("cargo"):
         subprocess.run(["cargo", "build", "--release", "--offline", "--quiet", "--target-dir", target],
                        cwd=yazi_dir, check=True)
-        built["yazi"] = os.path.join(target, "release", "yazi_bench")
+        built["yazi"] = executable(os.path.join(target, "release", "yazi_bench"))
     else:
         print("skipping yazi_bench (cargo not found)")
     if shutil.which("go"):
         out = os.path.join(build, "lf_bench")
-        subprocess.run(["go", "build", "-o", out, "."], cwd=os.path.join(TERMINAL, "lf_bench"), check=True)
-        built["lf"] = out
+        try:
+            subprocess.run(["go", "build", "-o", out, "."], cwd=os.path.join(TERMINAL, "lf_bench"), check=True)
+            built["lf"] = executable(out)
+        except subprocess.CalledProcessError:
+            print("skipping lf_bench (go build failed; lf_bench/go.mod names the Go version it needs)")
     else:
         print("skipping lf_bench (go not found)")
     return built
@@ -129,7 +159,7 @@ def run_projects(build, repeats, datasets, max_entries):
 
 def read_csv(path):
     """First table only (the Dolphin CSV has a second 'open' table after a blank line)."""
-    with open(path, newline="") as f:
+    with open(path) as f:  # universal newlines: the checkout may have CRLF
         text = f.read().split("\n\n")
     tables = [list(csv.DictReader(chunk.strip().splitlines())) for chunk in text if chunk.strip()]
     return tables
@@ -282,7 +312,9 @@ def summary_rows():
             projects.append(r["project"])
     out = []
     for project in projects:
-        large = [r for r in rows if r["project"] == project and r["dataset"] in LARGE]
+        # Timings only of orders that passed their check; the count of
+        # valid orders below covers all of them.
+        large = [r for r in rows if r["project"] == project and r["dataset"] in LARGE and r["bz_valid"] == "1"]
         if not large:
             continue
         name = project.split(" ")[0]
@@ -386,7 +418,7 @@ def write_report():
     if os.path.exists(GLIB_CSV):
         lines += glib_tables(GLIB_CSV) + [""]
     lines += project_tables()
-    with open(REPORT, "w") as f:
+    with open(REPORT, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
     print(f"wrote {os.path.relpath(REPORT, ROOT)}")
 
@@ -400,7 +432,10 @@ def main():
     parser.add_argument("--only-projects", action="store_true", help="run only the per-project benchmarks")
     parser.add_argument("--max-entries", type=int, default=200_000)
     parser.add_argument("--extra", nargs="*", default=[])
+    parser.add_argument("--tag", help="suffix for every output file, for runs on other machines")
     args = parser.parse_args()
+    if args.tag:
+        apply_tag(args.tag)
 
     os.makedirs(OUTPUTS, exist_ok=True)
     if not args.report_only:

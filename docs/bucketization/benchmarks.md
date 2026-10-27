@@ -304,6 +304,35 @@ both test suites.
 | Real comparators can be cyclic | **merge sorts only** inside buckets (C++ and Java) and for C++ layout samples; Java samples fall back to the merge sort when TimSort rejects the comparator | no undefined behaviour or exceptions; every element always returned |
 | lf has no tie-breaker for size and time, and linux-tree has no timestamps: every file tied, so the first bucket held the whole folder and a switch cost as much as lf's own sort (7.5 vs 7.2 ms, [cross-project](cross-project-benchmarks.md)) | C++ buckets are **checked for order before sorting** (Java's merge sort already skips sorted runs) | a bucket of ties costs one pass; same results, since a stable sort would not move a sorted bucket |
 
+## Second machine: Windows
+
+The benchmarks that build without Linux desktop libraries were repeated on an
+AMD Ryzen 5 2600X (16 GB DDR4-2133) under Windows 10 with MinGW-w64 GCC 13.2:
+nnn, the C++ port of lf, Godot, and yazi natively in Rust. lf's Go program
+was skipped (it needs Go 1.22; Go 1.15 was installed). Large real listings,
+timings of valid orders only:
+
+| project | re-sort (ms) | Bucketization switch (ms) | speed-up | pre-sort, once (ms) | first click slower | valid orders |
+|---|---:|---:|---:|---:|---:|---:|
+| nnn | 36–2,257 | 0.14–0.69 | 145–4,639× | 2.6–285 | 0/18 | 32/42 |
+| yazi (native Rust) | 7.7–67 | 0.089–0.43 | 40–286× | 1.3–16 | 0/24 | 42/42 |
+| lf (C++ port) | 4.0–1,904 | 0.080–1.2 | 9–6,503× | 1.1–336 | 0/24 | 42/42 |
+| Godot (on hold) | 3.6–2,391 | 0.13–6.4 | 5–879× | 1.6–2,510 | 8/24 | 36/36 |
+
+Full tables: `benchmarks/outputs/bucketization_file_manager_stacks_windows_ryzen2600x.md`.
+Synthetic workload: `benchmarks/outputs/results_bucketization_windows_ryzen2600x.csv`.
+
+**nnn's name column fails on Windows.** Its Bucketization key is a prefix of
+`strxfrm()` output, which the C standard requires to order like `strcoll()`.
+The Windows C runtime (UCRT, both MSVC and MinGW-w64) breaks that in its
+English locales: `speedup_check_strxfrm en_US.UTF-8 usr-bin.tsv` finds 245 of
+686,206 name pairs ordered differently (305 of 1,174,278 in usr-lib), and none
+in the `C` locale. On Windows that column needs a comparator-only sort key.
+
+Reproduce with `run_bucketization_benchmarks.py --build build --only-projects
+--quick --tag windows_ryzen2600x`; the tag keeps these files apart from the
+reference results.
+
 ## Reproducing
 
 ```bash

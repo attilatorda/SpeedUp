@@ -117,6 +117,8 @@ if(SPEEDUP_BUILD_BENCHMARKS)
     # benchmarks/terminal_stack/yazi_bench (Rust) and lf_bench (Go)).
     add_executable(speedup_benchmark_terminal_family benchmarks/terminal_stack/benchmark_terminal_family.cpp)
     target_link_libraries(speedup_benchmark_terminal_family PRIVATE speedup_bucketization)
+    # Does strcmp () on strxfrm () order like strcoll ()? nnn's key relies on it.
+    add_executable(speedup_check_strxfrm benchmarks/terminal_stack/check_strxfrm.c)
     # Godot editor's FileSystem dock sort (sort_file_info_list), extracted.
     add_executable(speedup_benchmark_godot benchmarks/godot_stack/benchmark_godot.cpp)
     target_link_libraries(speedup_benchmark_godot PRIVATE speedup_bucketization)

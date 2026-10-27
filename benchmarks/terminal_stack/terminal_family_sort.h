@@ -54,20 +54,33 @@ namespace nnn {
 
 typedef unsigned int uint_t;
 typedef unsigned long long ullong_t;
+#ifdef _WIN32
+// Windows has no uid_t/gid_t, and its mode_t and off_t are narrower; these
+// keep nnn's entry at its Linux x86-64 size and layout.
+typedef std::uint32_t mode_t_;
+typedef std::int64_t off_t_;
+typedef std::uint32_t uid_t_;
+typedef std::uint32_t gid_t_;
+#else
+typedef mode_t mode_t_;
+typedef off_t off_t_;
+typedef uid_t uid_t_;
+typedef gid_t gid_t_;
+#endif
 
 typedef struct entry {
     char* name;  /* 8 bytes */
     time_t sec;  /* 8 bytes */
     uint_t nsec; /* 4 bytes (enough to store nanosec) */
-    mode_t mode; /* 4 bytes */
-    off_t size;  /* 8 bytes */
+    mode_t_ mode; /* 4 bytes */
+    off_t_ size;  /* 8 bytes */
     struct {
         ullong_t blocks : 40; /* 5 bytes (enough for 512 TiB in 512B blocks allocated) */
         ullong_t nlen : 16;   /* 2 bytes (length of file name) */
         ullong_t flags : 8;   /* 1 byte (flags specific to the file) */
     };
-    uid_t uid; /* 4 bytes */
-    gid_t gid; /* 4 bytes */
+    uid_t_ uid; /* 4 bytes */
+    gid_t_ gid; /* 4 bytes */
 } *pEntry;
 
 /// The settings entrycmp () reads (nnn's global cfg).
@@ -159,7 +172,7 @@ inline entry make_entry(File& f) {
     e.sec = static_cast<time_t>(f.mtime_ns / 1000000000);
     e.nsec = static_cast<uint_t>(f.mtime_ns % 1000000000);
     e.mode = f.is_dir ? 040755 : 0100644;
-    e.size = static_cast<off_t>(f.size);
+    e.size = static_cast<off_t_>(f.size);
     e.blocks = (f.size + 511) / 512;
     e.nlen = f.name.size() + 1;
     e.flags = f.is_dir ? DIR_OR_DIRLNK : 0;

@@ -1,0 +1,15 @@
+\begin{tabular}{llrrrrrr}
+\toprule
+Machine & Key & \texttt{std::sort} & Pre-sort & Switch + page & Speed-up & Cached switch & Switch + sort all\\
+\midrule
+Xeon (Linux) & name & 1{,}052 & 135 & 2.1 & 501$\times$ & 0.0045 & 781\\
+ & size & 416 & 130 & 1.8 & 235$\times$ & 0.0049 & 145\\
+ & modified & 448 & 137 & 2.1 & 212$\times$ & 0.0048 & 151\\
+ & accessed & 433 & 119 & 1.8 & 238$\times$ & 0.0050 & 131\\
+\midrule
+Ryzen (Windows) & name & 1{,}088 & 152 & 4.5 & 243$\times$ & 0.0038 & 1{,}214\\
+ & size & 363 & 138 & 4.3 & 85$\times$ & 0.0048 & 135\\
+ & modified & 419 & 137 & 4.0 & 104$\times$ & 0.0050 & 147\\
+ & accessed & 358 & 139 & 4.5 & 79$\times$ & 0.0047 & 128\\
+\bottomrule
+\end{tabular}
