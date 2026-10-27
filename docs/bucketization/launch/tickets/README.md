@@ -1,24 +1,20 @@
-# Bug tickets to file now
+# Bug tickets (filed)
 
 These are bugs found in the projects' own sort code. They are written so they
 can be filed **before** the launch: they do not mention Bucketization or link
 to SpeedUp, and each carries its evidence inline. All were re-checked on
 2026-10-24 against the projects' current master branches.
 
-| Ticket | Project | Where to file | Kind | Status |
+| Ticket | Project | Filed at | Kind | Status |
 |---|---|---|---|---|
 | [dolphin-natural-sort-cycle.md](dolphin-natural-sort-cycle.md) | Dolphin | bugs.kde.org, product dolphin | bug: non-transitive comparison (since 0d10eff3) | filed 2026-10-27 (link to add) |
 | [krusader-descending-comparator.md](krusader-descending-comparator.md) | Krusader | bugs.kde.org, product krusader | bug: undefined behaviour in std::stable_sort (low severity) | filed 2026-10-27 (link to add) |
-| [lf-normalize-per-comparison.md](lf-normalize-per-comparison.md) | lf | github.com/gokcehan/lf/issues, "Bug report" form | performance (4–8× on name sorting) | ready, not filed; run [lf-sort-benchmark_test.go](lf-sort-benchmark_test.go) first (re-checked on master 78f781b, 2026-10-27) |
+| [lf-normalize-per-comparison.md](lf-normalize-per-comparison.md) | lf | github.com/gokcehan/lf/issues, "Bug report" form | performance (4–8× on name sorting) | filed 2026-10-27 (link to add); benchmark: [lf-sort-benchmark_test.go](lf-sort-benchmark_test.go) |
 
-They could not be filed from the session that prepared them. bugs.kde.org is
-not reachable from it, and it has no GitHub access outside the SpeedUp
-repository. File them from your own accounts. Each file starts with notes for
-you: where to file, what to search for first and, for bugs.kde.org, what to
-pick in each field of the form (bugs.kde.org for Dolphin and Krusader,
-lf's GitHub issue form for lf). The text to paste follows the `---` line:
-**Summary** goes into the one-line Summary field, **Description** replaces
-the template text in the Description box.
+All three were filed on 2026-10-27 from your own accounts. Each file keeps
+the filing notes (where, what to search for first, what to pick in each
+field of the form) and the text as prepared; the posted versions may differ
+where you edited them.
 
 **Not filed: the KDE file dialogs' folder counting.**
 `KDirModel::data(ChildCountRole)` counts a local folder's entries with

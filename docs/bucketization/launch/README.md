@@ -11,7 +11,7 @@ prepared so that launch day is mostly copy, check and post.
 | this README | strategy, the timeline, the checklist |
 | [announcement.md](announcement.md) | GitHub release notes and a short announcement |
 | [projects/](projects/) | one kit per project: where to post, account, license, AI policy, the post itself, follow-ups (Godot's kit is on hold) |
-| [tickets/](tickets/) | bug tickets to file before the launch (Dolphin, Krusader, lf), without mentioning Bucketization |
+| [tickets/](tickets/) | bug tickets for Dolphin, Krusader and lf, filed 2026-10-27, without mentioning Bucketization |
 | [CITATION.cff.template](CITATION.cff.template) | citation metadata for the repository root |
 | [fill_placeholders.py](fill_placeholders.py) | fills `<RELEASE_URL>`, `<YOUR_NAME>` and the other placeholders into ready-to-paste copies |
 | [update_numbers.py](update_numbers.py) | refreshes every number table in the kits after a benchmark re-run |
@@ -133,9 +133,9 @@ Bucketization is never merged. Order:
 3. **lf**: issue about normalizing names on every comparison. Normalizing
    once per sort makes name sorting 4–8× faster with the same order.
 
-   Items 1–3 can go out **before** the launch. Their ready-to-file texts in
-   [tickets/](tickets/) don't mention Bucketization. On launch day, only link
-   to them from the other posts.
+   Items 1–3 were filed on 2026-10-27, before the launch. They don't mention
+   Bucketization ([tickets/](tickets/)). On launch day, only link to them
+   from the other posts.
 4. **KDE**: one KDE Discuss post covering Dolphin, the file dialogs (KIO) and
    Krusader, with the numbers. Ask whether a benchmark merge request for
    Dolphin is welcome.
