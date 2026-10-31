@@ -1,0 +1,23 @@
+\begin{tabular}{llrrrrrr}
+\toprule
+ & & \multicolumn{3}{c}{GCC} & \multicolumn{3}{c}{MSVC}\\
+\cmidrule(lr){3-5} \cmidrule(lr){6-8}
+Type & Data & \texttt{std::sort} & Radix & Bucket & \texttt{std::sort} & Radix & Bucket\\
+ & & ns & speed-up & speed-up & ns & speed-up & speed-up\\
+\midrule
+u32 & uniform & 74.5 & 3.48$\times$ & -- & 87.7 & 3.82$\times$ & --\\
+ & skewed & 59.8 & 2.94$\times$ & -- & 65.5 & 3.03$\times$ & --\\
+ & sorted & 11.8 & 0.57$\times$ & -- & 12.4 & 0.60$\times$ & --\\
+ & few-unique & 25.0 & 2.70$\times$ & -- & 13.6 & 1.42$\times$ & --\\
+\midrule
+u64 & uniform & 74.6 & 1.55$\times$ & 0.84$\times$ & 89.6 & 1.88$\times$ & 1.09$\times$\\
+ & skewed & 59.3 & 2.53$\times$ & 0.81$\times$ & 65.9 & 2.73$\times$ & 0.94$\times$\\
+ & sorted & 16.9 & 0.72$\times$ & 0.53$\times$ & 14.9 & 0.63$\times$ & 0.29$\times$\\
+ & few-unique & 24.7 & 2.39$\times$ & 0.44$\times$ & 13.7 & 1.29$\times$ & 0.23$\times$\\
+\midrule
+f64 & uniform & 89.8 & 1.92$\times$ & 1.01$\times$ & 109 & 2.28$\times$ & 1.30$\times$\\
+ & skewed & 89.7 & 1.94$\times$ & 1.01$\times$ & 108 & 2.33$\times$ & 1.29$\times$\\
+ & sorted & 15.8 & 0.50$\times$ & 0.47$\times$ & 12.0 & 0.38$\times$ & 0.23$\times$\\
+ & few-unique & 28.6 & 1.87$\times$ & 0.48$\times$ & 16.7 & 1.07$\times$ & 0.28$\times$\\
+\bottomrule
+\end{tabular}

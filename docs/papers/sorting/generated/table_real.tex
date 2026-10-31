@@ -1,0 +1,14 @@
+\begin{tabular}{lrrrrrrr}
+\toprule
+ & & \multicolumn{3}{c}{GCC} & \multicolumn{3}{c}{MSVC}\\
+\cmidrule(lr){3-5} \cmidrule(lr){6-8}
+List & Names & \texttt{std::sort} & MSD radix & Name sort & \texttt{std::sort} & MSD radix & Name sort\\
+\midrule
+Census surnames, shuffled & 162{,}253 & 234 & \textbf{61.4} & 79.5 & 252 & \textbf{73.0} & 79.3\\
+Census surnames, popularity order & 162{,}253 & 212 & \textbf{55.8} & 74.9 & 230 & \textbf{75.0} & 77.1\\
+Census surnames, sorted & 162{,}253 & 129 & \textbf{38.5} & 48.5 & 94.4 & \textbf{49.7} & 53.9\\
+Census surnames, reversed & 162{,}253 & 94.6 & 60.0 & \textbf{59.8} & 97.5 & 65.3 & \textbf{64.5}\\
+Census surnames, upper case & 162{,}253 & 235 & \textbf{61.7} & 79.1 & 251 & \textbf{78.3} & 80.7\\
+Multilingual names & 1{,}000{,}000 & 407 & 195 & \textbf{126} & 427 & 302 & \textbf{120}\\
+\bottomrule
+\end{tabular}

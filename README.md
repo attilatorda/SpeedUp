@@ -95,12 +95,27 @@ int main(void) {
   comparison only; see `legacy/README.md` for why their first results did
   not hold.
 
+## Sorting
+- Sorts the standard libraries lack: radix sort, bucket sort, bitonic sort
+  (AVX2), and name sort, a bucket sort for person names whose buckets come
+  from character-frequency tables of US Census names.
+- API: `include/speedup/algorithms/sort.h` (C), `include/speedup/sort.hpp` (C++17).
+- Design: `docs/sorting/README.md`, `docs/sorting/name-sort.md`.
+- Results: `docs/sorting/results.md`, `benchmarks/outputs/sort_benchmarks.html`.
+
+```c
+speedup_radix_sort_f64(values, n, NULL);
+speedup_name_sort(names, count, SPEEDUP_NAME_SORT_BYTES);  /* speedup_str_t {data, len} */
+```
+
 ## Papers
 - `docs/papers/binary-search/`: what makes binary search fast, from L1 to DRAM
 - `docs/papers/bucketization/`: comparison-free re-sorting of multi-column views
+- `docs/papers/sorting/`: name sort (bucketing names by character frequency) and radix, bucket and bitonic sorts
 - Build: `python docs/papers/build_papers.py` (needs a LaTeX distribution with latexmk)
 
 ## Documentation index
+- Wiki (guides, API reference, versions): `docs/wiki/index.html`, built from `docs/wiki/pages/` by `python docs/wiki/build_wiki.py`
 - Architecture: `docs/architecture/overview.md`
 - Bucketization design and cross-language spec: `docs/bucketization/README.md`
 - Bucketization benchmarks against real file manager stacks (Dolphin, GNOME family): `docs/bucketization/benchmarks.md`
@@ -109,6 +124,7 @@ int main(void) {
 - Launch-day contribution plan and per-project kits: `docs/bucketization/launch/README.md`
 - Plan for contributing to KDE Dolphin: `docs/bucketization/kde-contribution-plan.md`
 - Binary search study: `docs/papers/binary-search/`
+- Sorting (radix, bucket, bitonic, name sort): `docs/sorting/README.md`
 - Benchmark methodology baseline: `BENCHMARKS.md`
 - API docs (Doxygen): `docs/api/README.md`
 

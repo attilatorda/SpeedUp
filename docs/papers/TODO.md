@@ -8,14 +8,17 @@ check.
 
 ## Manual steps
 
-- [ ] Read both PDFs once more yourself:
-      `docs/papers/binary-search/main.pdf`, `docs/papers/bucketization/main.pdf`.
+- [ ] Read the PDFs once more yourself:
+      `docs/papers/binary-search/main.pdf`, `docs/papers/bucketization/main.pdf`,
+      `docs/papers/sorting/main.pdf` (added 2026-10-31: name sort and the
+      numeric sorts).
 - [ ] Push the branch and open a pull request.
 - [ ] Submit to arXiv. Build the packages first:
       `python docs/papers/build_papers.py --check-arxiv`
       (writes `docs/papers/<paper>/arxiv/<paper>.tar.gz`, not tracked by git).
   - [ ] Binary search: primary cs.DS, cross-list cs.PF.
   - [ ] Bucketization: primary cs.DS, cross-list cs.DB (cs.HC optional).
+  - [ ] Sorting (name sort): primary cs.DS, cross-list cs.PF.
   - [ ] A first cs.DS submission may need an endorsement from an arXiv author.
 - [ ] After arXiv: add the arXiv IDs to `CITATION.cff`, `README.md` and the
       papers' Availability sections.
@@ -53,5 +56,9 @@ cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
 python benchmarks/scripts/run_bsearch_benchmarks.py run --build build --label gcc   # ~1 h per compiler
 python benchmarks/scripts/run_bsearch_benchmarks.py analyze
 python benchmarks/scripts/bucketization_paper_numbers.py
+python benchmarks/scripts/run_sort_benchmarks.py datasets <data>          # sorting study, ~2 h in all
+python benchmarks/scripts/run_sort_benchmarks.py run --build build --label gcc --data <data>
+python benchmarks/scripts/run_sort_benchmarks.py ablation --build build --data <data>
+python benchmarks/scripts/sorting_paper_numbers.py
 python docs/papers/build_papers.py --check-arxiv
 ```

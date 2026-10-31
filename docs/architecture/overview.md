@@ -3,7 +3,9 @@
 Dispatch order: CUDA -> OpenCL -> CPU optimized -> C fallback.
 
 Components:
-- Algorithms behind the C ABI with backend dispatch (binary search).
+- Algorithms behind the C ABI with backend dispatch (binary search;
+  sorting in `src/algorithms/sort`, where bitonic sort picks its AVX2 kernel
+  at run time and is the sort meant to gain a GPU path).
 - Header-only C++ / native Java components that call user code, such as
   Bucketization (`docs/bucketization/README.md`).
 

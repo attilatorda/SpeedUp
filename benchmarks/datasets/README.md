@@ -33,6 +33,26 @@ Names follow phone and camera conventions (`IMG_20240101_123456.jpg`,
 `PXL_…`, `DSC01234.JPG`, `VID_…`), timestamps increase in bursts, sizes are
 JPEG-like (log-normal around 2.7 MB).
 
+## Person names (`names/*.tsv.gz`)
+
+For the name sort benchmark (`docs/sorting/name-sort.md`). These are US
+Census Bureau data (public domain), written by
+`codegen/name_tables/build_name_tables.py`:
+
+| File | Entries | Columns |
+|------|--------:|---------|
+| `names/surnames.tsv.gz` | 162,253 | surname (title case), people with it (2010 Census) |
+| `names/first-names.tsv.gz` | 5,163 | first name, share among first names (1990 Census, female and male averaged) |
+
+Synthetic name lists are drawn from them and are not stored:
+`capture_names.py 1000000 -o names-1m.txt`. Each line is
+"Surname Firstname", both drawn by frequency, with a fixed seed.
+
+Real-name lists, not stored either: `census_name_lists.py OUT_DIR` writes the
+162,253 Census surnames in five orders (shuffled, popularity rank, sorted,
+reversed, ALL CAPS) and 1M multilingual names from `capture_listing.py intl`.
+Results: `benchmarks/outputs/namesort_real_*.csv`.
+
 ## Your own folders
 
 ```bash

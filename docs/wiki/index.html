@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SpeedUp Wiki</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  /* Doxygen's reference look, quieter: a pale sidebar, member boxes, one blue accent. */
+  --bg: #fcfcfd; --panel: #f3f5f8; --raised: #ffffff; --ink: #18202b; --ink-2: #485365;
+  --muted: #778294; --line: #e1e5eb; --accent: #2b5cad; --accent-soft: #e7eef9;
+  --code-bg: #f3f5f8; --tok-kw: #7b3fa0; --tok-str: #2c7a4b; --tok-com: #7b8696;
+  --tok-num: #ad5717; --tok-pp: #2b5cad;
+  --sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11151b; --panel: #161b23; --raised: #1a2029; --ink: #e3e8ef; --ink-2: #b2bbca;
+    --muted: #808b9c; --line: #272e39; --accent: #8db2ec; --accent-soft: #1c2940;
+    --code-bg: #171d26; --tok-kw: #c79ae8; --tok-str: #8fcd9e; --tok-com: #7d8899;
+    --tok-num: #e2a26c; --tok-pp: #8db2ec; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11151b; --panel: #161b23; --raised: #1a2029; --ink: #e3e8ef; --ink-2: #b2bbca;
+  --muted: #808b9c; --line: #272e39; --accent: #8db2ec; --accent-soft: #1c2940;
+  --code-bg: #171d26; --tok-kw: #c79ae8; --tok-str: #8fcd9e; --tok-com: #7d8899;
+  --tok-num: #e2a26c; --tok-pp: #8db2ec; color-scheme: dark;
+}
+:root[data-theme="light"] { color-scheme: light; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 var(--sans); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel); }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
+
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: flex; align-items: center; gap: 14px;
+  height: 52px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--panel); border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: baseline; gap: 8px; color: var(--ink); font-weight: 600; font-size: 16px; white-space: nowrap; }
+.brand:hover { text-decoration: none; }
+.brand-mark { font-family: var(--mono); font-size: 13px; color: var(--accent); }
+.chip { font: 500 11.5px/1 var(--mono); color: var(--ink-2); border: 1px solid var(--line); border-radius: 999px; padding: 4px 8px; background: var(--raised); }
+.spacer { flex: 1; }
+.search { position: relative; width: min(340px, 40vw); }
+.search input { width: 100%; height: 32px; padding: 0 10px 0 30px; font: 14px var(--sans); color: var(--ink);
+  background: var(--raised); border: 1px solid var(--line); border-radius: 7px; }
+.search input::placeholder { color: var(--muted); }
+.search svg { position: absolute; left: 9px; top: 9px; width: 14px; height: 14px; stroke: var(--muted); }
+.results { position: absolute; top: 38px; left: 0; right: 0; max-height: 60vh; overflow-y: auto; background: var(--raised);
+  border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 28px rgba(0,0,0,.14); padding: 4px; }
+.result { display: block; width: 100%; text-align: left; padding: 8px 10px; border: 0; border-radius: 6px; background: none; color: var(--ink); font: inherit; cursor: pointer; }
+.result:hover, .result.active { background: var(--accent-soft); }
+.result b { display: block; font-size: 14px; font-weight: 600; }
+.result span { display: block; font-size: 12.5px; color: var(--ink-2); }
+.result mark { background: none; color: var(--accent); font-weight: 600; }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 10px;
+  font: 13px var(--sans); color: var(--ink-2); background: var(--raised); border: 1px solid var(--line); border-radius: 7px; cursor: pointer; }
+.icon-btn:hover { color: var(--ink); border-color: var(--muted); }
+.icon-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.menu-btn { display: none; }
+
+.layout { display: grid; grid-template-columns: 240px minmax(0, 1fr) 200px; max-width: 1320px; margin: 0 auto; }
+.sidebar { position: sticky; top: calc(52px + env(safe-area-inset-top, 0px)); align-self: start; height: calc(100vh - 52px);
+  overflow-y: auto; padding: 22px 12px 40px max(16px, env(safe-area-inset-left, 0px)); border-right: 1px solid var(--line); }
+.nav-group { margin-bottom: 18px; }
+.nav-group h4 { margin: 0 0 6px 10px; font: 600 11px/1.4 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.nav-group a { display: block; padding: 4px 10px; border-radius: 6px; color: var(--ink-2); font-size: 14px; }
+.nav-group a:hover { background: var(--panel); color: var(--ink); text-decoration: none; }
+.nav-group a[aria-current="page"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+
+main { min-width: 0; padding: 28px 40px 64px; }
+.page { max-width: 760px; }
+.crumb { font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
+.page h1 { font-size: 30px; line-height: 1.2; margin: 0 0 18px; font-weight: 600; letter-spacing: -.01em; text-wrap: balance; }
+.page h2 { font-size: 20px; margin: 34px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); font-weight: 600; text-wrap: balance; }
+.page h3 { font-size: 16px; margin: 24px 0 8px; font-weight: 600; }
+.page p, .page li { color: var(--ink); }
+.page p { margin: 0 0 12px; }
+.page ul, .page ol { margin: 0 0 14px; padding-left: 22px; }
+.page li { margin: 3px 0; }
+.page code { font: 13px var(--mono); background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px; padding: 1px 5px; overflow-wrap: anywhere; }
+.page blockquote { margin: 0 0 14px; padding: 8px 14px; border-left: 3px solid var(--accent); background: var(--panel); border-radius: 0 6px 6px 0; }
+.code { position: relative; margin: 0 0 16px; }
+.code pre, .member-proto { margin: 0; overflow-x: auto; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.code pre code, .member-proto code { font: 13px/1.55 var(--mono); background: none; border: 0; padding: 0; color: var(--ink); }
+.code-lang { position: absolute; top: 6px; right: 10px; font: 11px var(--mono); color: var(--muted); }
+.tok-kw { color: var(--tok-kw); } .tok-str { color: var(--tok-str); } .tok-com { color: var(--tok-com); font-style: italic; }
+.tok-num { color: var(--tok-num); } .tok-pp { color: var(--tok-pp); }
+.table-wrap { overflow-x: auto; margin: 0 0 16px; border: 1px solid var(--line); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 7px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { background: var(--panel); font-weight: 600; color: var(--ink-2); font-size: 13px; }
+tr:last-child td { border-bottom: 0; }
+td code { white-space: nowrap; }
+
+.member { margin: 0 0 14px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: var(--raised); }
+.member-name { padding: 6px 14px; font: 600 13px var(--mono); color: var(--accent); background: var(--accent-soft); border-bottom: 1px solid var(--line); }
+.member .member-proto { border: 0; border-radius: 0; border-bottom: 1px solid var(--line); }
+.member-doc { padding: 10px 14px; font-size: 14px; color: var(--ink-2); }
+
+.version { margin: 0 0 14px; border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; background: var(--raised); }
+.version-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin-bottom: 6px; }
+.version-tag { font: 600 13px var(--mono); color: var(--accent); background: var(--accent-soft); padding: 2px 8px; border-radius: 5px; }
+.version-title { font-weight: 600; }
+.version-date { margin-left: auto; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.version ul { margin: 0; padding-left: 20px; }
+.version li { font-size: 14px; color: var(--ink-2); }
+
+.toc { position: sticky; top: calc(52px + env(safe-area-inset-top, 0px)); align-self: start; padding: 28px max(16px, env(safe-area-inset-right, 0px)) 40px 8px; font-size: 13px; }
+.toc h4 { margin: 0 0 8px; font: 600 11px/1.4 var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.toc button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 3px 0 3px 10px; color: var(--ink-2);
+  font: inherit; cursor: pointer; border-left: 1px solid var(--line); overflow-wrap: anywhere; }
+.toc button.sub { padding-left: 22px; }
+.toc button:hover { color: var(--accent); border-left-color: var(--accent); }
+.footer { max-width: 760px; margin-top: 48px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+
+@media (max-width: 1100px) { .layout { grid-template-columns: 230px minmax(0, 1fr); } .toc { display: none; } }
+@media (max-width: 820px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .sidebar { position: fixed; z-index: 4; top: calc(52px + env(safe-area-inset-top, 0px)); left: 0; width: min(280px, 86vw); background: var(--panel);
+    transform: translateX(-102%); transition: transform .18s ease; }
+  .sidebar.open { transform: none; box-shadow: 0 10px 40px rgba(0,0,0,.25); }
+  .menu-btn { display: inline-flex; }
+  main { padding: 22px max(16px, env(safe-area-inset-right, 0px)) 56px max(16px, env(safe-area-inset-left, 0px)); }
+  .search { width: auto; flex: 1; }
+  .brand-name, .chip { display: none; }
+  .theme-label { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .sidebar { transition: none; } }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="icon-btn menu-btn" id="menu" type="button" aria-label="Show pages"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  <a class="brand" href="#home"><span class="brand-mark">&lt;/&gt;</span><span class="brand-name">SpeedUp</span></a>
+  <span class="chip">v0.3.0</span>
+  <span class="spacer"></span>
+  <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="Search the wiki  ( / )" autocomplete="off" aria-label="Search the wiki"><div class="results" id="results" hidden></div></div>
+  <button class="icon-btn" id="theme" type="button"><svg class="sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg><svg class="moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/></svg><span class="theme-label">Dark</span></button>
+</header>
+<div class="layout">
+  <nav class="sidebar" id="sidebar" aria-label="Wiki pages"><div class="nav-group"><h4>Overview</h4><a href="#home">Home</a><a href="#getting-started">Getting started</a><a href="#architecture">Architecture</a></div><div class="nav-group"><h4>Algorithms</h4><a href="#binary-search">Binary search</a><a href="#bucketization">Bucketization</a><a href="#sorting">Sorting</a><a href="#name-sort">Name sort</a></div><div class="nav-group"><h4>Reference</h4><a href="#c-api">C API</a><a href="#cpp-api">C++ API</a><a href="#build-options">Build options</a></div><div class="nav-group"><h4>Project</h4><a href="#benchmarks">Benchmarks</a><a href="#papers">Papers</a><a href="#bindings">Bindings</a><a href="#contributing">Contributing</a><a href="#versions">Versions</a><a href="#changelog">Changelog</a></div></nav>
+  <main>
+<article class="page" data-page="home" hidden><h1>SpeedUp</h1>
+<p>SpeedUp is a cross-platform library of fast algorithms and data structures, written in C and C++ with optional assembly and GPU paths. Every accelerated path has a portable fallback, so the library always works, and its C ABI is stable so other languages can bind to it.</p>
+<h2 id="what-is-in-it">What is in it</h2>
+<div class="table-wrap"><table><thead><tr><th>Component</th><th>What it does</th><th>Interface</th></tr></thead><tbody><tr><td><a href="#binary-search">Binary search</a></td><td>Branchless and batched lower-bound search, measured from L1 to DRAM</td><td>C</td></tr><tr><td><a href="#bucketization">Bucketization</a></td><td>Switches a list between sort orders in <code>O(n)</code>, sorting only the rows on screen</td><td>C++17, Java 17</td></tr><tr><td><a href="#sorting">Sorting</a></td><td>Radix, bucket and bitonic sort, which no standard library ships</td><td>C, C++17</td></tr><tr><td><a href="#name-sort">Name sort</a></td><td>A bucket sort for person names, planned from name-frequency tables</td><td>C, C++17</td></tr></tbody></table></div>
+<h2 id="start-here">Start here</h2>
+<ul><li><a href="#getting-started">Getting started</a>: build, test and link the library.</li><li><a href="#c-api">C API reference</a> and <a href="#cpp-api">C++ API reference</a>.</li><li><a href="#benchmarks">Benchmarks</a>: what was measured, and where the numbers live.</li><li><a href="#papers">Papers</a>: the three studies behind the components.</li></ul>
+<h2 id="platforms">Platforms</h2>
+<ul><li>Windows and Unix, x86-64 and ARM64 (64-bit).</li><li>Compilers: GCC, Clang and MSVC, C11 and C++17.</li><li>Dispatch order: CUDA, then OpenCL, then optimized CPU code, then the C fallback. The GPU backends are stubs today, so every call ends on the CPU.</li></ul>
+<h2 id="license">License</h2>
+<p>AGPL-3.0. Bucketization carries an additional permission that lets the file managers it was measured in use it under their own licenses (<code>LICENSE-EXCEPTION-Bucketization.md</code>).</p></article>
+<article class="page" data-page="getting-started" hidden><div class="crumb">Overview</div><h1>Getting started</h1>
+<h2 id="build-and-test">Build and test</h2>
+<p>SpeedUp builds with CMake 3.20 or newer.</p>
+<div class="code"><span class="code-lang">bash</span><pre><code><span class="tok-kw">cmake</span> -S . -B build -DCMAKE_BUILD_TYPE=Release
+<span class="tok-kw">cmake</span> --build build --config Release
+<span class="tok-kw">ctest</span> --test-dir build --output-on-failure</code></pre></div>
+<p>The test suite has four programs: binary search, Bucketization, the sorts (C) and the sorting C++ layer. Optional dependencies (NASM, Qt 6, ICU, GLib, GTK 4) only add benchmarks; when they are missing, CMake skips those targets.</p>
+<p>For the language bindings, build a shared library:</p>
+<div class="code"><span class="code-lang">bash</span><pre><code><span class="tok-kw">cmake</span> -S . -B build-shared -DBUILD_SHARED_LIBS=ON
+<span class="tok-kw">cmake</span> --build build-shared --config Release</code></pre></div>
+<h2 id="use-it-from-cmake">Use it from CMake</h2>
+<div class="code"><span class="code-lang">cmake</span><pre><code><span class="tok-kw">add_subdirectory</span>(SpeedUp)
+<span class="tok-kw">target_link_libraries</span>(my_app <span class="tok-kw">PRIVATE</span> speedup)                 <span class="tok-com"># C ABI: search, sorts</span>
+<span class="tok-kw">target_link_libraries</span>(my_app <span class="tok-kw">PRIVATE</span> speedup::bucketization)  <span class="tok-com"># header-only C++17</span></code></pre></div>
+<h2 id="a-first-program">A first program</h2>
+<div class="code"><span class="code-lang">c</span><pre><code><span class="tok-pp">#include &lt;stdint.h&gt;</span>
+<span class="tok-pp">#include &quot;speedup/api.h&quot;</span>
+
+<span class="tok-kw">int</span> main(<span class="tok-kw">void</span>) {
+    speedup_init();
+    <span class="tok-kw">int64_t</span> a[<span class="tok-num">5</span>] = {<span class="tok-num">2</span>, <span class="tok-num">4</span>, <span class="tok-num">6</span>, <span class="tok-num">8</span>, <span class="tok-num">10</span>};
+    <span class="tok-kw">int64_t</span> idx = speedup_binary_search_i64(a, <span class="tok-num">6</span>, <span class="tok-num">5</span>);   <span class="tok-com">/* 2 */</span>
+
+    <span class="tok-kw">double</span> v[<span class="tok-num">4</span>] = {<span class="tok-num">3.5</span>, -<span class="tok-num">1.0</span>, <span class="tok-num">2.0</span>, <span class="tok-num">0.0</span>};
+    speedup_radix_sort_f64(v, <span class="tok-num">4</span>, <span class="tok-kw">NULL</span>);                  <span class="tok-com">/* -1, 0, 2, 3.5 */</span>
+    <span class="tok-kw">return</span> idx == <span class="tok-num">2</span> ? <span class="tok-num">0</span> : <span class="tok-num">1</span>;
+}</code></pre></div>
+<h2 id="mingw-on-windows">MinGW on Windows</h2>
+<p>If a test program exits with code <code>0xc0000139</code> (entry point not found), the loader picked up another toolchain's <code>libstdc++</code> DLL. Put the bin folder of the GCC that built SpeedUp first in <code>PATH</code> before running the tests.</p></article>
+<article class="page" data-page="architecture" hidden><div class="crumb">Overview</div><h1>Architecture</h1>
+<h2 id="layers">Layers</h2>
+<p>SpeedUp has two kinds of components.</p>
+<ul><li><strong>Algorithms behind the C ABI.</strong> Binary search and the sorts are plain C functions with fixed-width types. They dispatch to the best backend at run time and fall back to portable C. Any language with a C FFI can call them.</li><li><strong>Header-only C++ and native ports.</strong> Bucketization calls back into user code (key functions, comparators), so it is a C++17 header library with a native Java port instead of a C ABI.</li></ul>
+<h2 id="dispatch">Dispatch</h2>
+<p>Dispatch order: CUDA, then OpenCL, then optimized CPU code, then the C fallback. Callers can steer it:</p>
+<div class="code"><span class="code-lang">c</span><pre><code>speedup_set_backend_preference(SPEEDUP_BACKEND_FORCE_CPU);
+speedup_set_cache_hint(hint);       <span class="tok-com">/* the binary search picks its kernel from the L2 size */</span>
+speedup_sort_set_simd(<span class="tok-num">0</span>);           <span class="tok-com">/* bitonic sort without its AVX2 kernel */</span></code></pre></div>
+<p>The CUDA and OpenCL backends only check for a runtime today, so every preference ends on the CPU. Bitonic sort is the sort meant to gain a GPU path first. CPU features are detected once (<code>src/core/cpu_features.c</code>), and the AVX2 kernels are built in their own translation unit with AVX2 enabled.</p>
+<h2 id="repository-layout">Repository layout</h2>
+<div class="table-wrap"><table><thead><tr><th>Path</th><th>Contents</th></tr></thead><tbody><tr><td><code>include/speedup/</code></td><td>Public headers: <code>api.h</code>, <code>algorithms/*.h</code>, <code>sort.hpp</code>, <code>bucketization.hpp</code></td></tr><tr><td><code>src/core/</code></td><td>Initialization, dispatch hints, CPU feature detection</td></tr><tr><td><code>src/algorithms/</code></td><td>Binary search and the sorts</td></tr><tr><td><code>src/backends/</code></td><td>CPU assembly, CUDA and OpenCL stubs</td></tr><tr><td><code>codegen/</code></td><td>Typed specializations; the name-frequency table generator</td></tr><tr><td><code>bindings/</code></td><td>Language bindings; the native Java Bucketization</td></tr><tr><td><code>benchmarks/</code></td><td>Harnesses, datasets, scripts and raw results (<code>outputs/</code>)</td></tr><tr><td><code>tests/unit/</code></td><td>Differential tests against reference implementations</td></tr><tr><td><code>docs/</code></td><td>Design documents, papers, and this wiki</td></tr></tbody></table></div></article>
+<article class="page" data-page="binary-search" hidden><div class="crumb">Algorithms</div><h1>Binary search</h1>
+<p>Header: <code>include/speedup/algorithms/binary_search.h</code>. Kernels: <code>src/algorithms/binary_search/bsearch_kernels.h</code>.</p>
+<h2 id="what-the-library-does">What the library does</h2>
+<ul><li><strong>Single keys</strong> use a branchless search while the array fits the L2 cache hint, and a branchless search that prefetches both candidates of the next step beyond it. Branchy code loses to mispredictions in cache, and plain branchless code loses to memory latency outside it.</li><li><strong>Many keys</strong> (<code>*_batch_*</code>) search 16 keys in lockstep, so their cache misses overlap. On arrays larger than the caches this is about 4× faster per key than calling the single-key function in a loop.</li></ul>
+<div class="code"><span class="code-lang">c</span><pre><code><span class="tok-kw">int64_t</span> pos = speedup_lower_bound_i64(sorted, key, n);      <span class="tok-com">/* first index with sorted[i] &gt;= key */</span>
+speedup_lower_bound_batch_i64(sorted, n, keys, count, out); <span class="tok-com">/* many keys at once */</span></code></pre></div>
+<p>All functions take an array sorted in ascending order. For keys that occur more than once, <code>speedup_binary_search_i64</code> returns the first occurrence.</p>
+<h2 id="how-it-was-chosen">How it was chosen</h2>
+<p>The study measured 22 variants from 8 KiB to 512 MiB in throughput and latency mode, with two compilers. It also found the error in the original benchmark: its keys came from <code>rand()</code>, which never exceeds 32,767, so the large-array results never left the first 256 KiB. The hand-written assembly and AVX2 searches of the prototype are kept in <code>legacy/</code> for the comparison only. See <a href="#papers">Papers</a> and <code>docs/papers/binary-search/</code>.</p>
+<h2 id="functions">Functions</h2>
+<p>See the <a href="#c-api">C API reference</a>.</p></article>
+<article class="page" data-page="bucketization" hidden><div class="crumb">Algorithms</div><h1>Bucketization</h1>
+<p>Fast re-sorting for collections that can be ordered in several ways, such as a file manager's name, size and date columns. Header-only C++17 (<code>include/speedup/bucketization.hpp</code>, target <code>speedup::bucketization</code>) and pure Java 17 (<code>bindings/java/bucketization/</code>).</p>
+<h2 id="how-it-works">How it works</h2>
+<ol><li><strong>Sort keys.</strong> Each way of ordering is a sort key. It maps every element to a 64-bit order-preserving key (numbers exactly, strings by their first 8 bytes), or it is just a comparator.</li><li><strong>Bucket layout.</strong> For each key a sample is sorted and cut into buckets of planned, unequal sizes. The first and last buckets are one page long, so the first screen in either direction is cheap.</li><li><strong>Pre-sorting.</strong> When an element is added, it picks its bucket for every key once: a binary search over a few split points.</li><li><strong>Switching the order</strong> is a counting pass over the bucket ids: <code>O(n)</code>, with no comparisons. Switching back to a key used before costs <code>O(1)</code>.</li><li><strong>Lazy sorting.</strong> A bucket is sorted the first time a position inside it is read. Showing the first page sorts about one page of elements.</li></ol>
+<p>The order is exact. Buckets only decide when an element gets sorted, never where it ends up.</p>
+<h2 id="example">Example</h2>
+<div class="code"><span class="code-lang">cpp</span><pre><code><span class="tok-pp">#include &quot;speedup/bucketization.hpp&quot;</span>
+<span class="tok-kw">namespace</span> bz = speedup::bucketization;
+
+<span class="tok-kw">struct</span> File { <span class="tok-kw">std</span>::string name; <span class="tok-kw">std</span>::<span class="tok-kw">int64_t</span> size; <span class="tok-kw">std</span>::<span class="tok-kw">int64_t</span> modified; };
+
+bz::BucketIndex&lt;File&gt; files(bz::BucketPlan::defaults().with_page_size(visible_rows));
+files.add_sort_key(bz::SortKey&lt;File&gt;::of(<span class="tok-str">&quot;name&quot;</span>, &amp;File::name));
+files.add_sort_key(bz::SortKey&lt;File&gt;::of(<span class="tok-str">&quot;size&quot;</span>, &amp;File::size));
+files.add_sort_key(bz::SortKey&lt;File&gt;::of(<span class="tok-str">&quot;modified&quot;</span>, &amp;File::modified));
+files.add_all(load_directory());            <span class="tok-com">// pre-sorting happens here</span>
+
+files.sort_by(<span class="tok-str">&quot;modified&quot;</span>, bz::Direction::descending);   <span class="tok-com">// O(n), no comparisons</span>
+<span class="tok-kw">for</span> (<span class="tok-kw">const</span> File&amp; f : files.range(first, first + visible_rows)) draw(f);</code></pre></div>
+<h2 id="costs">Costs</h2>
+<div class="table-wrap"><table><thead><tr><th>Operation</th><th>Cost (n elements, k buckets, p page size)</th></tr></thead><tbody><tr><td>add one element</td><td><code>O(keys × log k)</code></td></tr><tr><td><code>sort_by</code></td><td><code>O(n + k)</code>, or <code>O(1)</code> when the grouping is cached</td></tr><tr><td>first page</td><td>about <code>O(p log p)</code></td></tr><tr><td><code>remove_if</code> / <code>update_if</code></td><td><code>O(n)</code> per call</td></tr><tr><td>memory per key and element</td><td>8 B key + 2 B bucket id, plus 4 B for a cached grouping</td></tr></tbody></table></div>
+<h2 id="limits">Limits</h2>
+<ul><li>Not thread-safe.</li><li>Below about 2,000 items a plain sort is just as fast.</li><li>One bucket plan per index, not per sort key.</li></ul>
+<p>Full design and the cross-language specification: <code>docs/bucketization/README.md</code>. Measured in the sort code of KDE Dolphin, the GNOME file managers, Qt file managers, terminal file managers and the Godot editor: <code>docs/bucketization/benchmarks.md</code> and the paper.</p></article>
+<article class="page" data-page="sorting" hidden><div class="crumb">Algorithms</div><h1>Sorting</h1>
+<p>Sorts that the standard libraries of C, C++, Java, Python, Rust, Go, C# and JavaScript do not ship. All of them sort in ascending order and in place. Header: <code>include/speedup/algorithms/sort.h</code>. C++ layer: <code>include/speedup/sort.hpp</code>.</p>
+<div class="table-wrap"><table><thead><tr><th>Sort</th><th>Types</th><th>Use it for</th></tr></thead><tbody><tr><td>Radix sort (LSD)</td><td>u32, i32, f32, u64, i64, f64</td><td>Large numeric arrays: linear time, no comparisons</td></tr><tr><td>Bucket sort</td><td>u64, i64, f64</td><td>Numeric data with a smooth distribution</td></tr><tr><td>Bitonic sort</td><td>u32, i32, f32, u64, i64, f64</td><td>Small arrays and fixed-pattern sorting: no data-dependent branches</td></tr><tr><td><a href="#name-sort">Name sort</a></td><td>byte strings</td><td>Person names and other strings</td></tr><tr><td>Bitonic merge sort (0.3.1)</td><td>u32, i32, f32, u64, i64, f64</td><td>Large numeric arrays: bitonic blocks, AVX2 merges</td></tr><tr><td>Bitonic bucket sort (0.3.1)</td><td>u32, i32, f32, u64, i64, f64</td><td>Sampled buckets finished by the network; kept for study</td></tr><tr><td>Bitonic sort, GPU (0.3.1)</td><td>as bitonic sort</td><td>Very large arrays, on a machine with an OpenCL GPU</td></tr></tbody></table></div>
+<h2 id="order">Order</h2>
+<ul><li><strong>Integers:</strong> numeric order.</li><li><strong>Floating point:</strong> IEEE 754 totalOrder, <code>-NaN &lt; -inf &lt; … &lt; -0.0 &lt; +0.0 &lt; … &lt; +inf &lt; +NaN</code>. Values are moved, never changed, so NaN payloads survive.</li><li><strong>Names:</strong> byte order (UTF-8 code point order), or ASCII-caseless with <code>SPEEDUP_NAME_SORT_ASCII_CASELESS</code>.</li></ul>
+<h2 id="examples">Examples</h2>
+<div class="code"><span class="code-lang">c</span><pre><code><span class="tok-kw">double</span> v[N];
+speedup_radix_sort_f64(v, N, <span class="tok-kw">NULL</span>);         <span class="tok-com">/* NULL: the library allocates scratch */</span>
+speedup_bucket_sort_f64(v, N, scratch);     <span class="tok-com">/* or pass N elements of scratch */</span>
+speedup_bitonic_sort_f64(v, N);             <span class="tok-com">/* in place, no scratch */</span></code></pre></div>
+<div class="code"><span class="code-lang">cpp</span><pre><code><span class="tok-pp">#include &quot;speedup/sort.hpp&quot;</span>
+<span class="tok-kw">namespace</span> ss = speedup::sort;
+
+ss::radix_sort(values);                      <span class="tok-com">// std::vector&lt;int|long|size_t|float|double|...&gt;</span>
+ss::radix_sort_by_key(files, [](<span class="tok-kw">const</span> File&amp; f) { <span class="tok-kw">return</span> f.size; });  <span class="tok-com">// stable, any movable type</span>
+ss::name_sort(names);                        <span class="tok-com">// std::vector&lt;std::string&gt; or std::string_view</span></code></pre></div>
+<p>Every function sorts. If an allocation fails, it falls back to an in-place comparison sort.</p>
+<h2 id="how-they-work">How they work</h2>
+<ul><li><strong>Radix sort:</strong> 8-bit digits. One read pass builds every digit's histogram, and a digit on which all keys agree is skipped. Signed and floating-point keys are encoded to unsigned in place and decoded on the last copy.</li><li><strong>Bucket sort:</strong> 64 equal-depth segments from a sample of 1,024 keys, each cut into equal-width buckets of about 32 keys, then an introsort per bucket. A bad estimate only makes a bucket larger. It never makes the result wrong.</li><li><strong>Bitonic sort:</strong> every comparator puts the smaller key first. That makes the network exact for any <code>n</code> without padding, because comparators that reach past the end are skipped. An AVX2 kernel is chosen at run time.</li></ul>
+<h2 id="the-gpu-path-0-3-1">The GPU path (0.3.1)</h2>
+<p>Bitonic sort can run on an OpenCL GPU. SpeedUp opens the OpenCL loader at run time, so building needs no OpenCL SDK, and machines without a GPU stay on the CPU.</p>
+<div class="code"><span class="code-lang">c</span><pre><code>speedup_set_backend_preference(SPEEDUP_BACKEND_FORCE_OPENCL);  <span class="tok-com">/* always on the GPU, if there is one */</span>
+speedup_bitonic_sort_u32(keys, n);
+speedup_set_backend_preference(SPEEDUP_BACKEND_AUTO);          <span class="tok-com">/* default: the GPU from 65,536 keys */</span></code></pre></div>
+<p>The keys are copied to the GPU and back on every call. Any GPU error falls back to the CPU.</p>
+<h2 id="when-to-use-which">When to use which</h2>
+<ul><li>Radix sort beats <code>std::sort</code> on large integer and floating-point arrays. It is slower on input that is already sorted, which <code>std::sort</code> handles very cheaply.</li><li>Bitonic sort with AVX2 beats <code>std::sort</code> on 32-bit keys while they fit in the caches. Beyond that, its <code>O(n log² n)</code> work loses.</li><li>Bucket sort is about level with <code>std::sort</code> on this machine. It is kept for data whose distribution a sample describes well.</li></ul>
+<p>Measured numbers: <a href="#benchmarks">Benchmarks</a>.</p></article>
+<article class="page" data-page="name-sort" hidden><div class="crumb">Algorithms</div><h1>Name sort</h1>
+<p>A bucket sort for person names. The bucket boundaries come from character-frequency tables of real names, one for each of the first three positions, built from US Census data and refined on a sample of the input.</p>
+<div class="code"><span class="code-lang">c</span><pre><code>speedup_str_t names[M];          <span class="tok-com">/* {data, len}; need not be NUL-terminated */</span>
+speedup_name_sort(names, M, SPEEDUP_NAME_SORT_BYTES);
+speedup_name_sort(names, M, SPEEDUP_NAME_SORT_ASCII_CASELESS);</code></pre></div>
+<h2 id="why-it-can-work">Why it can work</h2>
+<p>Names are far from uniform. About 9.6 % of US surnames begin with M and 0.04 % with X, and prefixes such as <em>Ma</em>, <em>Mc</em> and <em>Wil</em> hold more than one percent each. Knowing where the dense regions are lets the sort cut buckets of equal expected size in one step.</p>
+<h2 id="algorithm">Algorithm</h2>
+<ol><li><strong>Sample</strong> <code>n/128</code> names (256 to 16,384) and sort them.</li><li><strong>Plan</strong> a trie of at most three 257-entry lookup tables per path. A prefix expected to hold more than 32 names gets a child table for the next position; light symbols share leaves. The leaves are packed into buckets of about 32 names.</li><li><strong>Distribute</strong> in two linear passes, with at most three lookups per name.</li><li><strong>Finish</strong> each bucket: insertion sort or introsort up to 32 names, MSD radix sort above. Both skip the bytes the bucket's prefix fixes.</li></ol>
+<p>Below 131,072 names, planning does not pay, and name sort is its MSD radix sort alone.</p>
+<h2 id="what-the-measurements-say">What the measurements say</h2>
+<ul><li>On a million synthetic "Surname Firstname" names it is about 3× faster than <code>std::sort</code> and faster than a plain MSD radix sort.</li><li>On the 162,253 real Census surnames it is about 3× faster than <code>std::sort</code> but slower than plain MSD radix sort, because short unique surnames suit MSD radix sort.</li><li>The frequency tables did not measurably beat the input sample alone, and deeper tries, with more even buckets, were slower.</li></ul>
+<h2 id="unicode">Unicode</h2>
+<p>UTF-8 already sorts correctly, in code point order. For language order (Hungarian <em>cs</em> after <em>c</em>, German <em>ä</em> with <em>a</em>), sort ICU or <code>strxfrm</code> collation keys with the same function. The sample then does the work the ASCII-only tables cannot.</p>
+<p>Design notes: <code>docs/sorting/name-sort.md</code>. Study: <code>docs/papers/sorting/</code>.</p></article>
+<article class="page" data-page="c-api" hidden><div class="crumb">Reference</div><h1>C API reference</h1>
+<p>Include <code>speedup/api.h</code> for everything below, and call <code>speedup_init()</code> once before the first call. The ABI is stable: functions take fixed-width types, and nothing calls back into user code.</p>
+<h2 id="core">Core</h2>
+<p>Headers: <code>speedup/api.h</code>, <code>speedup/backend/dispatch.h</code>.</p>
+<div class="member" id="api-speedup-init"><div class="member-name">speedup_init</div><pre class="member-proto"><code><span class="tok-kw">void</span> speedup_init(<span class="tok-kw">void</span>);</code></pre><div class="member-doc">Initializes the library. Call it once before any other function.</div></div>
+<div class="member" id="api-speedup-set-backend-preference"><div class="member-name">speedup_set_backend_preference</div><pre class="member-proto"><code><span class="tok-kw">void</span> speedup_set_backend_preference(speedup_backend_pref_t pref);</code></pre><div class="member-doc">Chooses the backend: SPEEDUP_BACKEND_AUTO (default), SPEEDUP_BACKEND_FORCE_CPU, SPEEDUP_BACKEND_FORCE_CUDA or SPEEDUP_BACKEND_FORCE_OPENCL. Since 0.3.1 bitonic sort has an OpenCL path; everything else, and CUDA, runs on the CPU.</div></div>
+<div class="member" id="api-speedup-set-cache-hint"><div class="member-name">speedup_set_cache_hint</div><pre class="member-proto"><code><span class="tok-kw">void</span> speedup_set_cache_hint(speedup_cache_hint_t hint);</code></pre><div class="member-doc">Sets the cache sizes the algorithms plan for (l1_bytes, l2_bytes, l3_bytes, cacheline_bytes). The binary search switches to its prefetching kernel beyond the L2 hint. Defaults: 32 KiB, 256 KiB, 8 MiB, 64 B.</div></div>
+<div class="member" id="api-speedup-set-threads-hint"><div class="member-name">speedup_set_threads_hint</div><pre class="member-proto"><code><span class="tok-kw">void</span> speedup_set_threads_hint(<span class="tok-kw">uint32_t</span> n);</code></pre><div class="member-doc">Thread count hint; 0 means auto-detect. Reserved for parallel algorithms.</div></div>
+<div class="member" id="api-speedup-opencl-available"><div class="member-name">speedup_opencl_available</div><pre class="member-proto"><code><span class="tok-kw">int</span> speedup_opencl_available(<span class="tok-kw">void</span>);
+<span class="tok-kw">const</span> <span class="tok-kw">char</span>* speedup_opencl_device_name(<span class="tok-kw">void</span>);</code></pre><div class="member-doc">Whether an OpenCL GPU was found, and its name (0.3.1). The OpenCL loader is opened at run time on the first call; nothing is linked at build time.</div></div>
+<div class="member" id="api-speedup-get-backend-preference"><div class="member-name">speedup_get_backend_preference</div><pre class="member-proto"><code>speedup_backend_pref_t speedup_get_backend_preference(<span class="tok-kw">void</span>);
+speedup_cache_hint_t speedup_get_cache_hint(<span class="tok-kw">void</span>);
+<span class="tok-kw">uint32_t</span> speedup_get_threads_hint(<span class="tok-kw">void</span>);</code></pre><div class="member-doc">Read the current hints.</div></div>
+<h2 id="binary-search">Binary search</h2>
+<p>Header: <code>speedup/algorithms/binary_search.h</code>. All functions take an array sorted in ascending order.</p>
+<div class="member" id="api-speedup-binary-search-i64"><div class="member-name">speedup_binary_search_i64</div><pre class="member-proto"><code><span class="tok-kw">int64_t</span> speedup_binary_search_i64(<span class="tok-kw">const</span> <span class="tok-kw">int64_t</span>* array, <span class="tok-kw">int64_t</span> key, <span class="tok-kw">int64_t</span> size);</code></pre><div class="member-doc">Index of an element equal to key, or -1. When key occurs more than once, the first occurrence.</div></div>
+<div class="member" id="api-speedup-lower-bound-i64"><div class="member-name">speedup_lower_bound_i64</div><pre class="member-proto"><code><span class="tok-kw">int64_t</span> speedup_lower_bound_i64(<span class="tok-kw">const</span> <span class="tok-kw">int64_t</span>* array, <span class="tok-kw">int64_t</span> key, <span class="tok-kw">int64_t</span> size);</code></pre><div class="member-doc">First index i with array[i] &gt;= key, or size when every element is smaller.</div></div>
+<div class="member" id="api-speedup-binary-search-batch-i64"><div class="member-name">speedup_binary_search_batch_i64</div><pre class="member-proto"><code><span class="tok-kw">void</span> speedup_binary_search_batch_i64(<span class="tok-kw">const</span> <span class="tok-kw">int64_t</span>* array, <span class="tok-kw">int64_t</span> size, <span class="tok-kw">const</span> <span class="tok-kw">int64_t</span>* keys, <span class="tok-kw">int64_t</span> count, <span class="tok-kw">int64_t</span>* results);
+<span class="tok-kw">void</span> speedup_lower_bound_batch_i64(<span class="tok-kw">const</span> <span class="tok-kw">int64_t</span>* array, <span class="tok-kw">int64_t</span> size, <span class="tok-kw">const</span> <span class="tok-kw">int64_t</span>* keys, <span class="tok-kw">int64_t</span> count, <span class="tok-kw">int64_t</span>* results);</code></pre><div class="member-doc">results[i] is what the single-key function returns for keys[i]. On large arrays several times faster than a loop of single searches, because the searches overlap their cache misses.</div></div>
+<div class="member" id="api-speedup-binary-search-i64-ref"><div class="member-name">speedup_binary_search_i64_ref</div><pre class="member-proto"><code><span class="tok-kw">int64_t</span> speedup_binary_search_i64_ref(<span class="tok-kw">const</span> <span class="tok-kw">int64_t</span>* array, <span class="tok-kw">int64_t</span> key, <span class="tok-kw">int64_t</span> size);</code></pre><div class="member-doc">Textbook branching search with early exit; the baseline the others are tested against. Returns any matching index, or -1.</div></div>
+<h2 id="sorting">Sorting</h2>
+<p>Header: <code>speedup/algorithms/sort.h</code>. Every sort is ascending and in place. Floating point sorts in IEEE 754 totalOrder. <code>scratch</code> may be <code>NULL</code> (the library allocates) or a buffer of <code>n</code> elements of the same type. If an allocation fails, the function falls back to an in-place comparison sort.</p>
+<div class="member" id="api-speedup-radix-sort-u32"><div class="member-name">speedup_radix_sort_u32</div><pre class="member-proto"><code><span class="tok-kw">void</span> speedup_radix_sort_u32(<span class="tok-kw">uint32_t</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);
+<span class="tok-kw">void</span> speedup_radix_sort_i32(<span class="tok-kw">int32_t</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);
+<span class="tok-kw">void</span> speedup_radix_sort_f32(<span class="tok-kw">float</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);
+<span class="tok-kw">void</span> speedup_radix_sort_u64(<span class="tok-kw">uint64_t</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);
+<span class="tok-kw">void</span> speedup_radix_sort_i64(<span class="tok-kw">int64_t</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);
+<span class="tok-kw">void</span> speedup_radix_sort_f64(<span class="tok-kw">double</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);</code></pre><div class="member-doc">LSD radix sort with 8-bit digits; digits on which all keys agree are skipped. Below 256 elements, introsort.</div></div>
+<div class="member" id="api-speedup-bucket-sort-u64"><div class="member-name">speedup_bucket_sort_u64</div><pre class="member-proto"><code><span class="tok-kw">void</span> speedup_bucket_sort_u64(<span class="tok-kw">uint64_t</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);
+<span class="tok-kw">void</span> speedup_bucket_sort_i64(<span class="tok-kw">int64_t</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);
+<span class="tok-kw">void</span> speedup_bucket_sort_f64(<span class="tok-kw">double</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);</code></pre><div class="member-doc">Bucket sort: equal-depth splitters from a sample, linear interpolation between them, then a comparison sort per bucket.</div></div>
+<div class="member" id="api-speedup-bitonic-sort-u32"><div class="member-name">speedup_bitonic_sort_u32</div><pre class="member-proto"><code><span class="tok-kw">void</span> speedup_bitonic_sort_u32(<span class="tok-kw">uint32_t</span>* data, <span class="tok-kw">size_t</span> n);
+<span class="tok-kw">void</span> speedup_bitonic_sort_i32(<span class="tok-kw">int32_t</span>* data, <span class="tok-kw">size_t</span> n);
+<span class="tok-kw">void</span> speedup_bitonic_sort_f32(<span class="tok-kw">float</span>* data, <span class="tok-kw">size_t</span> n);
+<span class="tok-kw">void</span> speedup_bitonic_sort_u64(<span class="tok-kw">uint64_t</span>* data, <span class="tok-kw">size_t</span> n);
+<span class="tok-kw">void</span> speedup_bitonic_sort_i64(<span class="tok-kw">int64_t</span>* data, <span class="tok-kw">size_t</span> n);
+<span class="tok-kw">void</span> speedup_bitonic_sort_f64(<span class="tok-kw">double</span>* data, <span class="tok-kw">size_t</span> n);</code></pre><div class="member-doc">Bitonic sorting network for any n, O(n log² n) compare-exchanges without data-dependent branches. Runs on an OpenCL GPU under SPEEDUP_BACKEND_FORCE_OPENCL, and under SPEEDUP_BACKEND_AUTO for large arrays (0.3.1); otherwise on the CPU, with the AVX2 kernel when the CPU has AVX2. Any GPU failure falls back to the CPU.</div></div>
+<div class="member" id="api-speedup-bitonic-merge-sort-u32"><div class="member-name">speedup_bitonic_merge_sort_u32</div><pre class="member-proto"><code><span class="tok-kw">void</span> speedup_bitonic_merge_sort_u32(<span class="tok-kw">uint32_t</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);
+<span class="tok-kw">void</span> speedup_bitonic_merge_sort_i32(<span class="tok-kw">int32_t</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);
+<span class="tok-kw">void</span> speedup_bitonic_merge_sort_f32(<span class="tok-kw">float</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);
+<span class="tok-kw">void</span> speedup_bitonic_merge_sort_u64(<span class="tok-kw">uint64_t</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);
+<span class="tok-kw">void</span> speedup_bitonic_merge_sort_i64(<span class="tok-kw">int64_t</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);
+<span class="tok-kw">void</span> speedup_bitonic_merge_sort_f64(<span class="tok-kw">double</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);</code></pre><div class="member-doc">Bitonic merge sort (0.3.1): blocks sorted by the bitonic network, then merged, first inside the L2 cache, then across the array. With AVX2 every merge step merges a vector of keys in registers.</div></div>
+<div class="member" id="api-speedup-bitonic-bucket-sort-u32"><div class="member-name">speedup_bitonic_bucket_sort_u32</div><pre class="member-proto"><code><span class="tok-kw">void</span> speedup_bitonic_bucket_sort_u32(<span class="tok-kw">uint32_t</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);
+<span class="tok-kw">void</span> speedup_bitonic_bucket_sort_i32(<span class="tok-kw">int32_t</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);
+<span class="tok-kw">void</span> speedup_bitonic_bucket_sort_f32(<span class="tok-kw">float</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);
+<span class="tok-kw">void</span> speedup_bitonic_bucket_sort_u64(<span class="tok-kw">uint64_t</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);
+<span class="tok-kw">void</span> speedup_bitonic_bucket_sort_i64(<span class="tok-kw">int64_t</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);
+<span class="tok-kw">void</span> speedup_bitonic_bucket_sort_f64(<span class="tok-kw">double</span>* data, <span class="tok-kw">size_t</span> n, <span class="tok-kw">void</span>* scratch);</code></pre><div class="member-doc">Bitonic bucket sort (0.3.1): sampled buckets, each sorted by the bitonic network.</div></div>
+<div class="member" id="api-speedup-sort-set-simd"><div class="member-name">speedup_sort_set_simd</div><pre class="member-proto"><code><span class="tok-kw">void</span> speedup_sort_set_simd(<span class="tok-kw">int</span> enabled);</code></pre><div class="member-doc">0 turns the AVX2 kernels off, 1 (the default) uses them when the CPU has AVX2. For tests and benchmarks.</div></div>
+<h2 id="name-sort">Name sort</h2>
+<p>Header: <code>speedup/algorithms/sort.h</code>.</p>
+<div class="member" id="api-speedup-str-t"><div class="member-name">speedup_str_t</div><pre class="member-proto"><code><span class="tok-kw">typedef</span> <span class="tok-kw">struct</span> speedup_str_t { <span class="tok-kw">const</span> <span class="tok-kw">char</span>* data; <span class="tok-kw">size_t</span> len; } speedup_str_t;</code></pre><div class="member-doc">A name: bytes and length. data need not be NUL-terminated and may be NULL when len is 0.</div></div>
+<div class="member" id="api-speedup-name-sort"><div class="member-name">speedup_name_sort</div><pre class="member-proto"><code><span class="tok-kw">void</span> speedup_name_sort(speedup_str_t* names, <span class="tok-kw">size_t</span> n, <span class="tok-kw">uint32_t</span> flags);</code></pre><div class="member-doc">Sorts names in place. flags: SPEEDUP_NAME_SORT_BYTES (byte order, the default) or SPEEDUP_NAME_SORT_ASCII_CASELESS (A–Z compare as a–z; names equal up to case fall back to byte order).</div></div>
+<div class="member" id="api-speedup-name-sort-ex"><div class="member-name">speedup_name_sort_ex</div><pre class="member-proto"><code><span class="tok-kw">void</span> speedup_name_sort_ex(speedup_str_t* names, <span class="tok-kw">size_t</span> n, <span class="tok-kw">uint32_t</span> flags, <span class="tok-kw">const</span> speedup_name_sort_options_t* options, speedup_name_sort_stats_t* stats);</code></pre><div class="member-doc">As speedup_name_sort, with options (target_bucket: names per bucket, default 32; sample_size: default n/128 within 256..16384) and statistics of the plan (buckets, trie_blocks, max_bucket, mean_bucket, stddev_bucket, and oversized: buckets finished by MSD radix sort). Both pointers may be NULL.</div></div>
+<div class="member" id="api-speedup-name-compare"><div class="member-name">speedup_name_compare</div><pre class="member-proto"><code><span class="tok-kw">int</span> speedup_name_compare(speedup_str_t a, speedup_str_t b, <span class="tok-kw">uint32_t</span> flags);</code></pre><div class="member-doc">The order name sort produces: negative, zero or positive, like memcmp.</div></div></article>
+<article class="page" data-page="cpp-api" hidden><div class="crumb">Reference</div><h1>C++ API reference</h1>
+<p>Header-only C++17. The sorting layer forwards to the C ABI, so link <code>speedup</code>; Bucketization needs nothing but its headers.</p>
+<h2 id="sorting">Sorting</h2>
+<p>Header <code>speedup/sort.hpp</code>, namespace <code>speedup::sort</code>.</p>
+<div class="member" id="api-radix-sort"><div class="member-name">radix_sort</div><pre class="member-proto"><code><span class="tok-kw">template</span> &lt;<span class="tok-kw">class</span> T&gt; <span class="tok-kw">void</span> radix_sort(T* data, <span class="tok-kw">std</span>::<span class="tok-kw">size_t</span> n, T* scratch = <span class="tok-kw">nullptr</span>);
+<span class="tok-kw">template</span> &lt;<span class="tok-kw">class</span> T&gt; <span class="tok-kw">void</span> radix_sort(<span class="tok-kw">std</span>::vector&lt;T&gt;&amp; values);</code></pre><div class="member-doc">Any 4- or 8-byte integer type (int, long, size_t, ...), float or double. Picks the C function with the matching width and signedness.</div></div>
+<div class="member" id="api-bucket-sort"><div class="member-name">bucket_sort</div><pre class="member-proto"><code><span class="tok-kw">template</span> &lt;<span class="tok-kw">class</span> T&gt; <span class="tok-kw">void</span> bucket_sort(T* data, <span class="tok-kw">std</span>::<span class="tok-kw">size_t</span> n, T* scratch = <span class="tok-kw">nullptr</span>);
+<span class="tok-kw">template</span> &lt;<span class="tok-kw">class</span> T&gt; <span class="tok-kw">void</span> bucket_sort(<span class="tok-kw">std</span>::vector&lt;T&gt;&amp; values);</code></pre><div class="member-doc">8-byte integers or double.</div></div>
+<div class="member" id="api-bitonic-sort"><div class="member-name">bitonic_sort</div><pre class="member-proto"><code><span class="tok-kw">template</span> &lt;<span class="tok-kw">class</span> T&gt; <span class="tok-kw">void</span> bitonic_sort(T* data, <span class="tok-kw">std</span>::<span class="tok-kw">size_t</span> n);
+<span class="tok-kw">template</span> &lt;<span class="tok-kw">class</span> T&gt; <span class="tok-kw">void</span> bitonic_sort(<span class="tok-kw">std</span>::vector&lt;T&gt;&amp; values);</code></pre><div class="member-doc">4- or 8-byte integers, float or double.</div></div>
+<div class="member" id="api-radix-sort-by-key"><div class="member-name">radix_sort_by_key</div><pre class="member-proto"><code><span class="tok-kw">template</span> &lt;<span class="tok-kw">class</span> T, <span class="tok-kw">class</span> KeyFn&gt; <span class="tok-kw">void</span> radix_sort_by_key(<span class="tok-kw">std</span>::vector&lt;T&gt;&amp; values, KeyFn key);</code></pre><div class="member-doc">Stable LSD radix sort of any movable objects by a numeric key (integer, floating-point, bool or enum), encoded like Bucketization's normalized keys, so NaN keys sort last. Sorts (key, index) pairs, then moves every element once.</div></div>
+<div class="member" id="api-name-sort"><div class="member-name">name_sort</div><pre class="member-proto"><code><span class="tok-kw">void</span> name_sort(<span class="tok-kw">std</span>::vector&lt;<span class="tok-kw">std</span>::string_view&gt;&amp; names, <span class="tok-kw">std</span>::<span class="tok-kw">uint32_t</span> flags = SPEEDUP_NAME_SORT_BYTES, speedup_name_sort_stats_t* stats = <span class="tok-kw">nullptr</span>);
+<span class="tok-kw">void</span> name_sort(<span class="tok-kw">std</span>::vector&lt;<span class="tok-kw">std</span>::string&gt;&amp; names, <span class="tok-kw">std</span>::<span class="tok-kw">uint32_t</span> flags = SPEEDUP_NAME_SORT_BYTES, speedup_name_sort_stats_t* stats = <span class="tok-kw">nullptr</span>);</code></pre><div class="member-doc">Name sort over views (the views are reordered) or strings (every string is moved once).</div></div>
+<h2 id="bucketization">Bucketization</h2>
+<p>Header <code>speedup/bucketization.hpp</code>, namespace <code>speedup::bucketization</code>.</p>
+<div class="member" id="api-member"><div class="member-name"></div><pre class="member-proto"><code><span class="tok-kw">template</span> &lt;<span class="tok-kw">class</span> T&gt; <span class="tok-kw">class</span> BucketIndex : <span class="tok-kw">public</span> BucketedList&lt;T&gt;;</code></pre><div class="member-doc">The implementation. Construct it with a BucketPlan: BucketIndex&lt;File&gt; files(BucketPlan::defaults().with_page_size(rows));</div></div>
+<div class="member" id="api-add-sort-key"><div class="member-name">add_sort_key</div><pre class="member-proto"><code><span class="tok-kw">void</span> add_sort_key(SortKey&lt;T&gt; key);
+<span class="tok-kw">bool</span> remove_sort_key(<span class="tok-kw">std</span>::string_view name);
+<span class="tok-kw">std</span>::vector&lt;<span class="tok-kw">std</span>::string&gt; sort_key_names() <span class="tok-kw">const</span>;</code></pre><div class="member-doc">Registers a sort key and assigns every element to one of its buckets; throws std::invalid_argument if the name is taken. Removing the active key reverts to insertion order.</div></div>
+<div class="member" id="api-sort-by"><div class="member-name">sort_by</div><pre class="member-proto"><code><span class="tok-kw">void</span> sort_by(<span class="tok-kw">std</span>::string_view name, Direction direction = Direction::ascending);
+<span class="tok-kw">void</span> unsort();</code></pre><div class="member-doc">Switches the order: O(n) grouping, no comparisons; a key used before reuses its cached grouping. unsort() returns to insertion order.</div></div>
+<div class="member" id="api-size"><div class="member-name">size</div><pre class="member-proto"><code><span class="tok-kw">std</span>::<span class="tok-kw">size_t</span> size() <span class="tok-kw">const</span>;
+<span class="tok-kw">const</span> T&amp; at(<span class="tok-kw">std</span>::<span class="tok-kw">size_t</span> position);
+<span class="tok-kw">std</span>::vector&lt;T&gt; range(<span class="tok-kw">std</span>::<span class="tok-kw">size_t</span> <span class="tok-kw">from</span>, <span class="tok-kw">std</span>::<span class="tok-kw">size_t</span> to);
+<span class="tok-kw">std</span>::vector&lt;T&gt; first_page();
+<span class="tok-kw">void</span> for_each(<span class="tok-kw">const</span> Visitor&amp; visit);
+<span class="tok-kw">std</span>::optional&lt;<span class="tok-kw">std</span>::<span class="tok-kw">size_t</span>&gt; position_if(<span class="tok-kw">const</span> Predicate&amp; match);</code></pre><div class="member-doc">Read in the current order; a bucket is sorted when a position inside it is first read. at() throws std::out_of_range; range() clamps to size() and returns copies.</div></div>
+<div class="member" id="api-bucket-of"><div class="member-name">bucket_of</div><pre class="member-proto"><code><span class="tok-kw">std</span>::<span class="tok-kw">size_t</span> bucket_of(<span class="tok-kw">const</span> T&amp; value, <span class="tok-kw">std</span>::string_view key) <span class="tok-kw">const</span>;
+<span class="tok-kw">std</span>::vector&lt;<span class="tok-kw">std</span>::<span class="tok-kw">size_t</span>&gt; bucket_sizes(<span class="tok-kw">std</span>::string_view key) <span class="tok-kw">const</span>;
+<span class="tok-kw">bool</span> needs_rebalance(<span class="tok-kw">std</span>::string_view key) <span class="tok-kw">const</span>;
+<span class="tok-kw">void</span> rebalance(<span class="tok-kw">std</span>::string_view key);
+<span class="tok-kw">void</span> set_plan(BucketPlan plan);</code></pre><div class="member-doc">Inspect and maintain the layout: the bucket an element belongs to, current bucket sizes, and re-estimation when the data drifted from the sample.</div></div>
+<div class="member" id="api-sort-all"><div class="member-name">sort_all</div><pre class="member-proto"><code><span class="tok-kw">void</span> sort_all();</code></pre><div class="member-doc">Fully sorts every bucket of the active key now, for example when the application is idle.</div></div>
+<div class="member" id="api-add"><div class="member-name">add</div><pre class="member-proto"><code><span class="tok-kw">void</span> add(T value);
+<span class="tok-kw">void</span> add_all(<span class="tok-kw">std</span>::vector&lt;T&gt; values);
+<span class="tok-kw">std</span>::<span class="tok-kw">size_t</span> remove_if(<span class="tok-kw">const</span> Predicate&amp; match);
+<span class="tok-kw">std</span>::<span class="tok-kw">size_t</span> update_if(<span class="tok-kw">const</span> Predicate&amp; match, <span class="tok-kw">const</span> Mutator&amp; mutate = {});
+<span class="tok-kw">void</span> clear();</code></pre><div class="member-doc">Changes. update_if re-reads the keys of the matching elements; call it after anything that changes an element's order.</div></div>
+<div class="member" id="api-of"><div class="member-name">of</div><pre class="member-proto"><code><span class="tok-kw">static</span> SortKey of(<span class="tok-kw">std</span>::string name, Projection projection);
+<span class="tok-kw">static</span> SortKey of_key(<span class="tok-kw">std</span>::string name, KeyFunction key, CompareFunction tie_breaker = {});
+<span class="tok-kw">static</span> SortKey of_comparator(<span class="tok-kw">std</span>::string name, CompareFunction compare);
+SortKey with_groups(<span class="tok-kw">std</span>::<span class="tok-kw">size_t</span> groups, GroupFunction group) <span class="tok-kw">const</span>;</code></pre><div class="member-doc">Sort keys (class SortKey&lt;T&gt;): from a member or projection (numbers exactly, strings by an 8-byte prefix plus a full comparison), from a 64-bit key function with an optional tie-breaker, or from a comparator only. with_groups (1 to 256 groups) keeps groups such as "folders first" in both directions.</div></div>
+<div class="member" id="api-defaults"><div class="member-name">defaults</div><pre class="member-proto"><code><span class="tok-kw">static</span> BucketPlan defaults();
+<span class="tok-kw">static</span> BucketPlan first_page(<span class="tok-kw">std</span>::<span class="tok-kw">size_t</span> page_size);
+<span class="tok-kw">static</span> BucketPlan geometric(<span class="tok-kw">std</span>::<span class="tok-kw">size_t</span> page_size, <span class="tok-kw">double</span> growth);
+<span class="tok-kw">static</span> BucketPlan uniform(<span class="tok-kw">std</span>::<span class="tok-kw">size_t</span> buckets);
+<span class="tok-kw">static</span> BucketPlan of_sizes(<span class="tok-kw">std</span>::vector&lt;<span class="tok-kw">std</span>::<span class="tok-kw">size_t</span>&gt; sizes);</code></pre><div class="member-doc">Bucket plans (class BucketPlan, immutable). defaults() is geometric(64, 2.0). Options: with_page_size, with_max_buckets, with_symmetric, with_sample_size, with_seed, with_rebalance_skew, with_auto_rebalance.</div></div>
+<p>The complete interface, with the Java names alongside: <code>docs/bucketization/README.md</code>.</p></article>
+<article class="page" data-page="build-options" hidden><div class="crumb">Reference</div><h1>Build options</h1>
+<h2 id="cmake-options">CMake options</h2>
+<div class="table-wrap"><table><thead><tr><th>Option</th><th>Default</th><th>Effect</th></tr></thead><tbody><tr><td><code>SPEEDUP_ENABLE_ASM</code></td><td><code>ON</code></td><td>NASM-assembled paths; switched off automatically when NASM is missing</td></tr><tr><td><code>SPEEDUP_ENABLE_OPENCL</code></td><td><code>ON</code></td><td>OpenCL backend (runtime check only today)</td></tr><tr><td><code>SPEEDUP_ENABLE_CUDA</code></td><td><code>OFF</code></td><td>CUDA backend (runtime check only today)</td></tr><tr><td><code>SPEEDUP_BUILD_BENCHMARKS</code></td><td><code>ON</code></td><td>Benchmark executables</td></tr><tr><td><code>SPEEDUP_BUILD_EXAMPLES</code></td><td><code>ON</code></td><td>Example programs (<code>examples/</code>)</td></tr><tr><td><code>BUILD_SHARED_LIBS</code></td><td><code>OFF</code></td><td>Shared library, for language bindings</td></tr></tbody></table></div>
+<h2 id="tuning-defaults">Tuning defaults</h2>
+<p>Cached CMake variables that seed the run-time hints in the generated <code>speedup/config.h</code>:</p>
+<div class="table-wrap"><table><thead><tr><th>Variable</th><th>Default</th><th>Meaning</th></tr></thead><tbody><tr><td><code>SPEEDUP_DEFAULT_THREADS</code></td><td><code>0</code></td><td>Thread hint; 0 detects automatically</td></tr><tr><td><code>SPEEDUP_DEFAULT_L1_BYTES</code></td><td><code>32768</code></td><td>L1 data cache hint</td></tr><tr><td><code>SPEEDUP_DEFAULT_L2_BYTES</code></td><td><code>262144</code></td><td>L2 cache hint</td></tr><tr><td><code>SPEEDUP_DEFAULT_L3_BYTES</code></td><td><code>8388608</code></td><td>L3 cache hint</td></tr></tbody></table></div>
+<h2 id="targets">Targets</h2>
+<div class="table-wrap"><table><thead><tr><th>Target</th><th>Kind</th><th>Contents</th></tr></thead><tbody><tr><td><code>speedup</code></td><td>library</td><td>C ABI: core, binary search, sorts</td></tr><tr><td><code>speedup::bucketization</code></td><td>interface</td><td>Header-only Bucketization (C++17)</td></tr><tr><td><code>speedup_*_test</code></td><td>executables</td><td>Unit tests, registered with CTest</td></tr><tr><td><code>speedup_bench_*</code></td><td>executables</td><td>Benchmark harnesses</td></tr></tbody></table></div>
+<h2 id="simd">SIMD</h2>
+<p>The AVX2 sort kernels are compiled in their own file with <code>-mavx2</code> or <code>/arch:AVX2</code> on x86-64, and chosen at run time only when the CPU and the operating system support AVX2. Other targets use the portable C kernels.</p></article>
+<article class="page" data-page="benchmarks" hidden><div class="crumb">Project</div><h1>Benchmarks</h1>
+<p>Every benchmark checks its results against a reference before it times anything, and raw results are kept as CSV files in <code>benchmarks/outputs/</code>. The reference machine is an AMD Ryzen 5 2600X under Windows 10, with GCC 13.2 and MSVC 19.41.</p>
+<h2 id="where-the-numbers-are">Where the numbers are</h2>
+<div class="table-wrap"><table><thead><tr><th>Component</th><th>Harness</th><th>Results</th><th>Summary</th></tr></thead><tbody><tr><td>Binary search</td><td><code>benchmarks/binary_search/bench_bsearch.cpp</code></td><td><code>bsearch_ryzen2600x_*.csv</code></td><td><code>docs/papers/binary-search/</code></td></tr><tr><td>Bucketization</td><td><code>benchmarks/*_stack/</code> (Dolphin, GNOME, Qt, terminal, Godot)</td><td><code>bucketization_*.csv</code></td><td><code>docs/bucketization/benchmarks.md</code></td></tr><tr><td>Sorting</td><td><code>benchmarks/sort/bench_sort.cpp</code></td><td><code>sort_ryzen2600x_*.csv</code>, <code>namesort_*.csv</code></td><td><code>docs/sorting/results.md</code></td></tr></tbody></table></div>
+<p>The sorting results also come as an interactive page with charts and tables: <code>benchmarks/outputs/sort_benchmarks.html</code>.</p>
+<h2 id="headline-results">Headline results</h2>
+<ul><li><strong>Binary search:</strong> 16 interleaved searches are about 4× faster per key than single searches once the array outgrows the caches.</li><li><strong>Bucketization:</strong> in the sort code of real file managers, switching the sort column drops from hundreds of milliseconds to a few milliseconds on folders of about 100,000 entries.</li><li><strong>Sorting:</strong> radix sort is up to about 4× faster than <code>std::sort</code> on large 32-bit arrays. Name sort is about 3× faster on large name lists.</li><li><strong>0.3.1:</strong> bitonic merge sort is about 3.4× faster than <code>std::sort</code> on 32-bit keys. Bitonic sort on a GPU (GeForce GTX 1660 SUPER, copies included) is about 14× faster on 16 Mi 32-bit keys when it runs back to back, and about 5× when the GPU has been idle and has to clock up first.</li></ul>
+<h2 id="running-them">Running them</h2>
+<div class="code"><span class="code-lang">bash</span><pre><code><span class="tok-kw">python</span> benchmarks/scripts/run_bsearch_benchmarks.py run --build build --label gcc
+<span class="tok-kw">python</span> benchmarks/scripts/run_bucketization_benchmarks.py --build build
+<span class="tok-kw">python</span> benchmarks/scripts/run_sort_benchmarks.py datasets data
+<span class="tok-kw">python</span> benchmarks/scripts/run_sort_benchmarks.py run --build build --label gcc --data data</code></pre></div>
+<h2 id="method">Method</h2>
+<ul><li>Pin the thread to one core and raise its priority.</li><li>Interleave the timed runs of the algorithms round-robin, so slow periods of the machine hit them all alike.</li><li>Report the median and the interquartile range.</li></ul>
+<p>Compare algorithms within one run. Separate runs on the reference machine differ by up to about 15 %.</p></article>
+<article class="page" data-page="papers" hidden><div class="crumb">Project</div><h1>Papers</h1>
+<p>Three studies, written for arXiv. Every figure, table and number in them is generated from the benchmark CSVs by a script, so they can be rebuilt after any re-run.</p>
+<div class="table-wrap"><table><thead><tr><th>Paper</th><th>Topic</th><th>Source</th></tr></thead><tbody><tr><td>What makes binary search fast, from L1 to DRAM</td><td>branchless search, prefetching, interleaved batches, a benchmark pitfall</td><td><code>docs/papers/binary-search/</code></td></tr><tr><td>Bucketization: comparison-free re-sorting of multi-column views</td><td>the Bucketization design, measured in ten file managers and the Godot editor</td><td><code>docs/papers/bucketization/</code></td></tr><tr><td>Name sort: bucketing person names by character frequency</td><td>name sort, its ablation and real name lists; radix, bucket and bitonic sort</td><td><code>docs/papers/sorting/</code></td></tr></tbody></table></div>
+<h2 id="building-them">Building them</h2>
+<p>They need a LaTeX distribution with <code>latexmk</code>.</p>
+<div class="code"><span class="code-lang">bash</span><pre><code><span class="tok-kw">python</span> docs/papers/build_papers.py                 <span class="tok-com"># all PDFs</span>
+<span class="tok-kw">python</span> docs/papers/build_papers.py --check-arxiv   <span class="tok-com"># arXiv tarballs, rebuilt with pdflatex only</span></code></pre></div>
+<p>The inputs come from <code>run_bsearch_benchmarks.py analyze</code>, <code>bucketization_paper_numbers.py</code> and <code>sorting_paper_numbers.py</code> in <code>benchmarks/scripts/</code>.</p></article>
+<article class="page" data-page="bindings" hidden><div class="crumb">Project</div><h1>Language bindings</h1>
+<p>SpeedUp exposes a stable C ABI for bindings. Build it as a shared library (<code>-DBUILD_SHARED_LIBS=ON</code>) and load it with your language's FFI.</p>
+<h2 id="status">Status</h2>
+<div class="table-wrap"><table><thead><tr><th>Tier</th><th>Languages</th></tr></thead><tbody><tr><td>A (target)</td><td>C, Python, C#, Java</td></tr><tr><td>Experimental</td><td>Julia, Rust, Go, Swift, Kotlin, JavaScript/TypeScript, Scala, R, Zig</td></tr></tbody></table></div>
+<p>Most bindings are stubs today. A binding counts as smoke-complete when it loads the shared library and gets the expected result from <code>speedup_binary_search_i64</code>.</p>
+<h2 id="python-through-ctypes">Python, through ctypes</h2>
+<div class="code"><span class="code-lang">python</span><pre><code><span class="tok-kw">import</span> ctypes
+<span class="tok-kw">from</span> ctypes <span class="tok-kw">import</span> c_int64, POINTER
+
+lib = ctypes.CDLL(path_to_speedup_dll)
+lib.speedup_binary_search_i64.argtypes = [POINTER(c_int64), c_int64, c_int64]
+lib.speedup_binary_search_i64.restype = c_int64
+
+arr = (c_int64 * <span class="tok-num">5</span>)(<span class="tok-num">2</span>, <span class="tok-num">4</span>, <span class="tok-num">6</span>, <span class="tok-num">8</span>, <span class="tok-num">10</span>)
+<span class="tok-kw">assert</span> lib.speedup_binary_search_i64(arr, <span class="tok-num">6</span>, <span class="tok-num">5</span>) == <span class="tok-num">2</span></code></pre></div>
+<p>The full smoke test is <code>bindings/python/smoke_test.py</code>.</p>
+<h2 id="native-ports">Native ports</h2>
+<p>Components that call back into user code are ported natively instead: Bucketization exists in C++ and in Java 17 (<code>bindings/java/bucketization/</code>, built with Maven). Other ports follow the cross-language specification in <code>docs/bucketization/README.md</code>, which includes golden values every port must reproduce.</p></article>
+<article class="page" data-page="contributing" hidden><div class="crumb">Project</div><h1>Contributing</h1>
+<h2 id="workflow">Workflow</h2>
+<ol><li>Create a feature branch.</li><li>Keep commits focused and descriptive.</li><li>Build and run the tests before opening a pull request.</li></ol>
+<div class="code"><span class="code-lang">bash</span><pre><code><span class="tok-kw">cmake</span> -S . -B build
+<span class="tok-kw">cmake</span> --build build --config Release
+<span class="tok-kw">ctest</span> --test-dir build --output-on-failure</code></pre></div>
+<h2 id="rules">Rules</h2>
+<ul><li>The C API stays stable and backward-compatible.</li><li>Every accelerated path keeps a working fallback when the accelerator is missing.</li><li>Tests compare against a reference implementation (<code>qsort</code>, a linear scan), not against hand-picked expected values.</li><li>Performance changes come with benchmark evidence: the harness, the hardware, the compiler, and the CSV in <code>benchmarks/outputs/</code>.</li></ul>
+<h2 id="editing-this-wiki">Editing this wiki</h2>
+<p>The pages are Markdown files in <code>docs/wiki/pages/</code>. Each starts with a small header naming its title, sidebar section and order. Rebuild the site with:</p>
+<div class="code"><span class="code-lang">bash</span><pre><code><span class="tok-kw">python</span> docs/wiki/build_wiki.py</code></pre></div>
+<p>This writes <code>docs/wiki/index.html</code>, a single self-contained page. The changelog page is read from <code>CHANGELOG.md</code>.</p></article>
+<article class="page" data-page="versions" hidden><div class="crumb">Project</div><h1>Versions</h1>
+<p>What changed in each version, in short. The full list is in the <a href="#changelog">Changelog</a>.</p>
+<div class="version"><div class="version-head"><span class="version-tag">0.3.1</span><span class="version-title">Bitonic hybrids and the GPU</span><span class="version-date">not yet released</span></div><ul><li>Bitonic sort runs on an OpenCL GPU, found at run time with no SDK needed: the first GPU path in SpeedUp.</li><li>Bitonic merge sort: bitonic blocks merged with an AVX2 merge network.</li><li>Bitonic bucket sort: sampled buckets finished by the bitonic network.</li><li>A C++ fix: the dispatch header lacked extern "C".</li></ul></div>
+<div class="version"><div class="version-head"><span class="version-tag">Unreleased</span><span class="version-title">Sorting</span><span class="version-date">not yet released</span></div><ul><li>Radix sort, bucket sort and bitonic sort (with an AVX2 kernel) for 32- and 64-bit integers and floating-point numbers. No standard library ships these.</li><li>Name sort: a bucket sort for person names, planned from US Census name-frequency tables.</li><li>A C++17 sorting layer, including a stable radix sort of any objects by a numeric key.</li><li>A third paper, on name sort and the new sorts, and an interactive results page.</li><li>This wiki.</li></ul></div>
+<div class="version"><div class="version-head"><span class="version-tag">0.3.0</span><span class="version-title">Binary search, measured properly</span><span class="version-date">not yet released</span></div><ul><li>The original benchmark drew its keys with rand(), which never exceeds 32,767, so its large-array results did not hold. A new harness measures 22 variants from 8 KiB to 512 MiB.</li><li>The single-key search is now branchless, with prefetching beyond the L2 cache: about 2× faster in the caches. With duplicate keys it returns the first occurrence.</li><li>New: lower bound, and batch searches of 16 keys in lockstep, about 4× faster per key on large arrays.</li><li>AVX2 detection works; the Bucketization benchmarks run on Windows.</li><li>Papers on binary search and on Bucketization.</li></ul></div>
+<div class="version"><div class="version-head"><span class="version-tag">0.2.0</span><span class="version-title">Bucketization</span><span class="version-date">27 October 2026</span></div><ul><li>Bucketization in C++17 (header-only) and Java 17: switching a list's sort order in O(n), sorting only the rows on screen.</li><li>Measured in the real sort code of KDE Dolphin, the GNOME file managers, Qt and terminal file managers, and the Godot editor.</li><li>Found three comparator bugs upstream (Dolphin, Krusader, lf) and reported them.</li><li>A license exception lets those projects use Bucketization under their own licenses.</li></ul></div>
+<div class="version"><div class="version-head"><span class="version-tag">0.1.0</span><span class="version-title">First release</span><span class="version-date">14 May 2026</span></div><ul><li>An optimized binary search behind a stable C ABI.</li><li>Backends chosen at run time: portable C, Windows x64 assembly, and CUDA and OpenCL stubs with CPU fallback.</li><li>CPU feature detection, code generation for typed specializations, tests, benchmarks, CI, and setup notes for 14 languages.</li></ul></div></article>
+<article class="page" data-page="changelog" hidden><div class="crumb">Project</div><h1>Changelog</h1>
+<p>The complete record, read from <code>CHANGELOG.md</code>. In short: <a href="#versions">Versions</a>.</p>
+<p>All notable changes to SpeedUp. Versions follow <a href="https://semver.org/" target="_blank" rel="noopener">Semantic Versioning</a>; while the major version is 0, a new minor version may change APIs.</p>
+<h2 id="0-3-1-unreleased">0.3.1 - unreleased</h2>
+<p>Bitonic hybrids, and the first GPU path.</p>
+<h3 id="added">Added</h3>
+<ul><li><strong>Bitonic sort on the GPU</strong> (OpenCL): <code>speedup_bitonic_sort_*</code> runs on an OpenCL GPU under <code>SPEEDUP_BACKEND_FORCE_OPENCL</code>, and under <code>SPEEDUP_BACKEND_AUTO</code> from the size where the GPU wins with its copies included. The OpenCL loader is opened at run time, so building needs no OpenCL SDK and machines without a GPU stay on the CPU. Work-groups sort blocks in local memory, then global and local merge stages finish the network. <code>speedup_opencl_available()</code>, <code>speedup_opencl_device_name()</code>.</li><li><strong>Bitonic merge sort</strong> (<code>speedup_bitonic_merge_sort_*</code>): blocks sorted by the bitonic network, then merged, first inside the L2 cache and then across the array, with an AVX2 merge that merges a vector of keys at a time in registers.</li><li><strong>Bitonic bucket sort</strong> (<code>speedup_bitonic_bucket_sort_*</code>): the sampled bucket sort with every bucket finished by the bitonic network; 32-bit types too.</li><li>C++: <code>bitonic_merge_sort</code>, <code>bitonic_bucket_sort</code>. Benchmark entries <code>bitonic_merge</code>, <code>bitonic_bucket</code>, <code>bitonic_gpu</code>; tuning runner <code>run_sort_benchmarks.py tune031</code>.</li></ul>
+<h3 id="fixed">Fixed</h3>
+<ul><li><code>speedup/backend/dispatch.h</code> lacked <code>extern &quot;C&quot;</code>, so C++ code calling the dispatch hints did not link.</li></ul>
+<h2 id="unreleased">Unreleased</h2>
+<p>Sorting, first step: sorts that the standard libraries of C, C++, Java, Python, Rust, Go, C# and JavaScript do not ship (<code>docs/sorting/README.md</code>).</p>
+<h3 id="added">Added</h3>
+<ul><li>Radix sort (LSD, 8-bit digits, skips digits all keys share) for u32, i32, f32, u64, i64 and f64: <code>speedup_radix_sort_*</code>.</li><li>Bucket sort (sampled equal-depth segments, interpolated buckets) for u64, i64 and f64: <code>speedup_bucket_sort_*</code>.</li><li>Bitonic sort for any n, with an AVX2 kernel chosen at run time: <code>speedup_bitonic_sort_*</code>, <code>speedup_sort_set_simd</code>.</li><li>Name sort, a bucket sort for person names, with buckets cut from character-frequency tables for positions 1–3 (US Census data) refined on a sample: <code>speedup_name_sort</code>, <code>speedup_name_sort_ex</code>, <code>speedup_name_compare</code> (<code>docs/sorting/name-sort.md</code>).</li><li>C++17 layer <code>include/speedup/sort.hpp</code>, including a stable <code>radix_sort_by_key</code> for any movable type.</li><li>Table generator <code>codegen/name_tables/build_name_tables.py</code>, name lists <code>benchmarks/datasets/names/</code>, synthetic name lists <code>benchmarks/datasets/capture_names.py</code>.</li><li>Tests <code>tests/unit/test_sort.c</code> and <code>test_sort.cpp</code>, benchmark <code>benchmarks/sort/bench_sort.cpp</code>, results <code>docs/sorting/results.md</code> and <code>benchmarks/outputs/sort_*</code>.</li><li>Wiki <code>docs/wiki/</code>: Markdown pages built into one self-contained site (<code>docs/wiki/build_wiki.py</code>), with search, a C and C++ API reference, a summary of every version, and light and dark modes.</li><li>Paper <code>docs/papers/sorting/</code> (arXiv-ready), with the study runner <code>benchmarks/scripts/run_sort_benchmarks.py</code> (main runs, real name lists, an ablation of name sort's design choices) and <code>benchmarks/scripts/sorting_paper_numbers.py</code> (every number, table and figure).</li></ul>
+<h2 id="0-3-0-unreleased">0.3.0 - unreleased</h2>
+<p>Binary search, measured properly. The earlier benchmark drew its keys with <code>rand()</code>, which never exceeds 32,767, so it never searched beyond the first 256 KiB of an array; its large-array results did not hold. A new harness measures 22 variants from 8 KiB to 512 MiB, and the library now uses what won.</p>
+<h3 id="added">Added</h3>
+<ul><li><code>speedup_lower_bound_i64</code>, <code>speedup_binary_search_batch_i64</code> and <code>speedup_lower_bound_batch_i64</code>. The batch functions search 16 keys in lockstep: about 4× faster per key than single searches on arrays larger than the caches.</li><li>Benchmark harness <code>benchmarks/binary_search/bench_bsearch.cpp</code> (throughput and latency modes, every variant verified before and during timing), runner <code>benchmarks/scripts/run_bsearch_benchmarks.py</code>, results <code>benchmarks/outputs/bsearch_ryzen2600x_*.csv</code>.</li><li>Papers, with every number generated from the result files: <code>docs/papers/binary-search/</code> and <code>docs/papers/bucketization/</code> (<code>docs/papers/build_papers.py</code> builds them and packs them for arXiv).</li><li><code>legacy/README.md</code>: what the prototype files are and why their results do not hold; the disassembly of the prototype's lost <code>*_fixed</code> functions.</li></ul>
+<h3 id="changed">Changed</h3>
+<ul><li><code>speedup_binary_search_i64</code> used the textbook search on every path. It now uses a branchless search, with prefetching once the array exceeds the L2 cache hint (<code>speedup_set_cache_hint</code>): about 2× faster in the caches, and never more than a few percent slower than the textbook search on large arrays. When the key occurs more than once, it now returns the first occurrence.</li><li><code>speedup_cpu_has_avx2</code> detects AVX2 (it returned 0).</li><li>A forced CUDA or OpenCL preference no longer makes the search return -1 (neither backend implements it yet).</li><li><code>benchmarks/core/benchmark_win.c</code> draws its keys with SplitMix64; <code>-DBENCH_LEGACY_RAND</code> restores the old generator.</li><li>The Bucketization benchmarks build on Windows (nnn's entry struct used POSIX-only types); <code>run_bucketization_benchmarks.py --tag</code> keeps the results of other machines apart, carries on when a benchmark reports invalid orders, and reads CSVs with CRLF line endings. Summary timings now cover valid orders only. Windows results: <code>docs/bucketization/benchmarks.md</code>.</li><li><code>speedup_check_strxfrm</code>: checks that <code>strxfrm()</code> orders like <code>strcoll()</code>. The Windows C runtime does not in its English locales, which makes nnn's name key unusable there.</li></ul>
+<h2 id="0-2-0-2026-10-27">0.2.0 - 2026-10-27</h2>
+<p>Bucketization: fast re-sorting of collections that can be ordered in several ways, such as a file manager's name, size and date columns. A column click regroups the elements in O(n) and sorts only the rows on screen. The binary-search library from 0.1.0 is unchanged.</p>
+<h3 id="added">Added</h3>
+<ul><li><strong>Bucketization, C++17:</strong> header-only, <code>include/speedup/bucketization.hpp</code>, CMake target <code>speedup::bucketization</code>. Interface <code>BucketedList&lt;T&gt;</code>, reference implementation <code>BucketIndex&lt;T&gt;</code>, with <code>SortKey</code>, <code>BucketPlan</code> and <code>BucketLayout</code>. Unit tests (<code>tests/unit/test_bucketization.cpp</code>) and an example (<code>examples/bucketization/file_browser.cpp</code>).</li><li><strong>Bucketization, Java 17:</strong> Maven module <code>bindings/java/bucketization</code> (<code>io.github.attilatorda.speedup:speedup-bucketization</code>), same interface and behaviour, no runtime dependencies. CI job <code>java-bucketization</code>.</li><li><strong>Design and cross-language specification:</strong> <code>docs/bucketization/README.md</code>, with golden values (S1–S8) that every port must reproduce.</li><li><strong>Benchmarks against real file-manager sort code</strong>, on real folder listings: - KDE: Dolphin (<code>KFileItemModel</code>), the file dialogs (KIO's <code>KDirSortFilterProxyModel</code>), Krusader; - GNOME family: GLib's <code>g_sequence_sort</code> (Thunar, Nemo, Caja) and Nautilus's GTK 4 sort models; - Qt: PCManFM-Qt (libfm-qt); - terminal: yazi (native Rust), lf (native Go), nnn; - Godot's editor FileSystem dock.</li></ul>
+<p>Runner: <code>benchmarks/scripts/run_bucketization_benchmarks.py</code>; results in <code>benchmarks/outputs/</code>; write-ups in <code>docs/bucketization/benchmarks.md</code> and <code>docs/bucketization/cross-project-benchmarks.md</code>.</p>
+<ul><li><strong>Comparator checks</strong> that found three upstream issues, reported on 2026-10-27: a non-transitive natural sort in Dolphin, a descending comparator in Krusader that is not a strict weak ordering, and per-comparison name normalization in lf (<code>docs/bucketization/launch/tickets/</code>).</li><li><strong>Survey</strong> of how 12 file managers sort (<code>docs/bucketization/file-manager-survey.md</code>), a KDE contribution plan and a launch kit with one post per project (<code>docs/bucketization/launch/</code>).</li><li><strong>License exception</strong> (<code>LICENSE-EXCEPTION-Bucketization.md</code>): Dolphin, KIO, Krusader, Thunar, Nemo, Caja, Nautilus, GLib, GTK, PCManFM-Qt, libfm-qt, yazi, lf, nnn and Godot may use the Bucketization code, and ports of it, under their own licenses. SpeedUp itself stays AGPL-3.0.</li><li>This changelog.</li></ul>
+<h3 id="changed">Changed</h3>
+<ul><li>Version 0.2.0 in CMake, <code>speedup/version.h</code>, the Doxygen configuration and the Java module.</li></ul>
+<h2 id="0-1-0-2026-05-14">0.1.0 - 2026-05-14</h2>
+<p>First release: an optimized binary search with a fallback design.</p>
+<h3 id="added">Added</h3>
+<ul><li><strong>C API</strong> (<code>include/speedup/api.h</code>) with a stable C ABI: <code>speedup_init()</code> and <code>speedup_binary_search_i64()</code>.</li><li><strong>Backends, chosen at run time:</strong> - portable C reference implementation, always available; - Windows x64 assembly (NASM), disabled automatically when NASM is missing; - GPU paths for CUDA and OpenCL, with runtime checks and CPU fallback.</li><li><strong>CPU feature detection and dispatch</strong> (<code>src/core/</code>).</li><li><strong>Code generation</strong> for type specializations (<code>codegen/</code>).</li><li><strong>Tests:</strong> unit tests for binary search, legacy correction tests, smoke test.</li><li><strong>Benchmarks:</strong> Windows x64 benchmark and baseline results; the original benchmark assets in <code>legacy/</code>.</li><li><strong>Bindings:</strong> shared-library build, a Python smoke test, and setup notes for C, C++, C#, Go, Java, JavaScript, Kotlin, Python, R, Rust, Scala, Swift, TypeScript and Zig.</li><li><strong>Documentation:</strong> architecture overview, benchmark methodology and analysis, Doxygen setup, contributing guide, issue and PR templates.</li><li><strong>CI:</strong> build and test workflow, backend compile checks, bindings smoke test.</li></ul></article>
+    <div class="footer">SpeedUp 0.3.0 · generated from <code>docs/wiki/pages/</code> on 2026-10-31 by <code>docs/wiki/build_wiki.py</code></div>
+  </main>
+  <aside class="toc" id="toc" aria-label="On this page"><h4>On this page</h4><div id="toc-list"></div></aside>
+</div>
+<script>
+(function () {
+  var root = document.documentElement;
+  var pages = Array.prototype.slice.call(document.querySelectorAll('.page'));
+  var byId = {};
+  pages.forEach(function (p) { byId[p.dataset.page] = p; });
+  var navLinks = Array.prototype.slice.call(document.querySelectorAll('.nav-group a'));
+  var toc = document.getElementById('toc-list');
+  var sidebar = document.getElementById('sidebar');
+
+  // ---- theme: system by default, a click picks the other one and remembers it
+  var themeBtn = document.getElementById('theme');
+  function effective() {
+    var t = root.getAttribute('data-theme');
+    if (t === 'dark' || t === 'light') return t;
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  function paintThemeButton() {
+    var dark = effective() === 'dark';
+    themeBtn.querySelector('.sun').hidden = !dark;
+    themeBtn.querySelector('.moon').hidden = dark;
+    themeBtn.querySelector('.theme-label').textContent = dark ? 'Light' : 'Dark';
+    themeBtn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+  }
+  try { var saved = localStorage.getItem('speedup-wiki-theme'); if (saved === 'dark' || saved === 'light') root.setAttribute('data-theme', saved); } catch (e) {}
+  themeBtn.addEventListener('click', function () {
+    var next = effective() === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('speedup-wiki-theme', next); } catch (e) {}
+    paintThemeButton();
+  });
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', paintThemeButton);
+  }
+  paintThemeButton();
+
+  // ---- routing: #page-id selects a page
+  function show(id, keepScroll) {
+    if (!byId[id]) id = 'home';
+    pages.forEach(function (p) { p.hidden = p.dataset.page !== id; });
+    navLinks.forEach(function (a) {
+      if (a.getAttribute('href') === '#' + id) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    buildToc(byId[id]);
+    sidebar.classList.remove('open');
+    if (!keepScroll) window.scrollTo(0, 0);
+  }
+  function buildToc(page) {
+    toc.replaceChildren();
+    var heads = page.querySelectorAll('h2, h3');
+    document.getElementById('toc').hidden = heads.length < 2;
+    Array.prototype.forEach.call(heads, function (h) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = h.textContent;
+      if (h.tagName === 'H3') b.className = 'sub';
+      b.addEventListener('click', function () { h.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+      toc.appendChild(b);
+    });
+  }
+  window.addEventListener('hashchange', function () { show(location.hash.slice(1)); });
+  show(location.hash.slice(1), true);
+
+  document.getElementById('menu').addEventListener('click', function () { sidebar.classList.toggle('open'); });
+
+  // ---- search over every page's text
+  var input = document.getElementById('q');
+  var box = document.getElementById('results');
+  var index = pages.map(function (p) {
+    return { id: p.dataset.page, title: p.querySelector('h1').textContent, text: p.textContent.replace(/\s+/g, ' ') };
+  });
+  var active = 0, hits = [];
+  function snippet(text, term) {
+    var i = text.toLowerCase().indexOf(term);
+    var start = Math.max(0, i - 40);
+    var s = (start ? '…' : '') + text.slice(start, i + 80) + '…';
+    return s;
+  }
+  function render() {
+    box.replaceChildren();
+    hits.forEach(function (h, k) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'result' + (k === active ? ' active' : '');
+      var t = document.createElement('b'); t.textContent = h.title;
+      var s = document.createElement('span'); s.textContent = h.snip;
+      b.append(t, s);
+      b.addEventListener('mousedown', function (e) { e.preventDefault(); go(h.id); });
+      box.appendChild(b);
+    });
+    if (!hits.length) {
+      var none = document.createElement('div');
+      none.className = 'result';
+      none.textContent = 'No page mentions that.';
+      box.appendChild(none);
+    }
+    box.hidden = false;
+  }
+  function go(id) { input.value = ''; box.hidden = true; input.blur(); location.hash = id; if (location.hash === '#' + id) show(id); }
+  input.addEventListener('input', function () {
+    var q = input.value.trim().toLowerCase();
+    if (!q) { box.hidden = true; return; }
+    var terms = q.split(/\s+/);
+    hits = index.filter(function (p) {
+      var hay = (p.title + ' ' + p.text).toLowerCase();
+      return terms.every(function (t) { return hay.indexOf(t) >= 0; });
+    }).map(function (p) {
+      var inTitle = p.title.toLowerCase().indexOf(terms[0]) >= 0;
+      return { id: p.id, title: p.title, snip: snippet(p.text, terms[0]), rank: inTitle ? 0 : 1 };
+    }).sort(function (a, b) { return a.rank - b.rank; }).slice(0, 8);
+    active = 0;
+    render();
+  });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown' && hits.length) { active = (active + 1) % hits.length; render(); e.preventDefault(); }
+    else if (e.key === 'ArrowUp' && hits.length) { active = (active + hits.length - 1) % hits.length; render(); e.preventDefault(); }
+    else if (e.key === 'Enter' && hits[active]) { go(hits[active].id); }
+    else if (e.key === 'Escape') { input.value = ''; box.hidden = true; input.blur(); }
+  });
+  input.addEventListener('blur', function () { setTimeout(function () { box.hidden = true; }, 120); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === '/' && document.activeElement !== input) { e.preventDefault(); input.focus(); }
+  });
+})();
+</script>
+</body>
+</html>

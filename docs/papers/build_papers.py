@@ -13,6 +13,7 @@
 Regenerate the inputs first:
   benchmarks/scripts/run_bsearch_benchmarks.py analyze
   benchmarks/scripts/bucketization_paper_numbers.py
+  benchmarks/scripts/sorting_paper_numbers.py
 """
 import argparse
 import shutil
@@ -23,7 +24,7 @@ import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-PAPERS = ["binary-search", "bucketization"]
+PAPERS = ["binary-search", "bucketization", "sorting"]
 SOURCES = ["main.tex", "main.bbl", "refs.bib"]
 DIRS = ["generated", "figures"]
 

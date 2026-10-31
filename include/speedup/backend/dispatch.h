@@ -1,5 +1,8 @@
 #pragma once
 #include <stdint.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef enum speedup_backend_pref_t {
     SPEEDUP_BACKEND_AUTO = 0,
@@ -22,3 +25,12 @@ void speedup_set_backend_preference(speedup_backend_pref_t pref);
 uint32_t speedup_get_threads_hint(void);
 speedup_cache_hint_t speedup_get_cache_hint(void);
 speedup_backend_pref_t speedup_get_backend_preference(void);
+
+/* 1 when an OpenCL GPU was found (the OpenCL loader is opened on the first
+ * call), and that device's name, or "". */
+int speedup_opencl_available(void);
+const char* speedup_opencl_device_name(void);
+
+#ifdef __cplusplus
+}
+#endif

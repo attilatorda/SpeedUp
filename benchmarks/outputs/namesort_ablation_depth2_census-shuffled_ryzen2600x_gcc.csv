@@ -1,0 +1,17 @@
+compiler,kind,type,distribution,n,algorithm,ns_per_element,ok,buckets,max_bucket,stddev_bucket,q1_ns,q3_ns,reps
+gcc,names,str,names,1000,msd_radix,36.5000,1,,,,36.2000,36.7000,9
+gcc,names,str,names,1000,name_sort,48.9000,1,0,0,0.00,47.5000,53.1000,9
+gcc,names,str,names,2000,msd_radix,39.3000,1,,,,38.9000,39.7000,9
+gcc,names,str,names,2000,name_sort,47.4500,1,0,0,0.00,46.8500,47.8000,9
+gcc,names,str,names,5000,msd_radix,40.0600,1,,,,39.8800,40.5200,9
+gcc,names,str,names,5000,name_sort,47.0200,1,0,0,0.00,46.3600,47.6200,9
+gcc,names,str,names,10000,msd_radix,57.7600,1,,,,41.4000,58.4200,9
+gcc,names,str,names,10000,name_sort,67.8800,1,0,0,0.00,57.0000,68.3600,9
+gcc,names,str,names,20000,msd_radix,43.5450,1,,,,43.0100,43.8000,9
+gcc,names,str,names,20000,name_sort,48.8100,1,0,0,0.00,48.5900,49.8000,9
+gcc,names,str,names,50000,msd_radix,47.5080,1,,,,47.1880,47.6820,9
+gcc,names,str,names,50000,name_sort,54.5100,1,0,0,0.00,53.9960,55.8180,9
+gcc,names,str,names,100000,msd_radix,53.9370,1,,,,52.9340,55.6820,9
+gcc,names,str,names,100000,name_sort,67.1250,1,0,0,0.00,64.8080,78.1280,9
+gcc,names,str,names,162253,msd_radix,64.8216,1,,,,63.1249,69.0650,9
+gcc,names,str,names,162253,name_sort,75.1931,1,314,4963,751.54,74.0331,76.2494,9

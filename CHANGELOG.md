@@ -4,6 +4,68 @@ All notable changes to SpeedUp. Versions follow
 [Semantic Versioning](https://semver.org/); while the major version is 0,
 a new minor version may change APIs.
 
+## [0.3.1] - unreleased
+
+Bitonic hybrids, and the first GPU path.
+
+### Added
+
+- **Bitonic sort on the GPU** (OpenCL): `speedup_bitonic_sort_*` runs on an
+  OpenCL GPU under `SPEEDUP_BACKEND_FORCE_OPENCL`, and under
+  `SPEEDUP_BACKEND_AUTO` from the size where the GPU wins with its copies
+  included. The OpenCL loader is opened at run time, so building needs no
+  OpenCL SDK and machines without a GPU stay on the CPU. Work-groups sort
+  blocks in local memory, then global and local merge stages finish the
+  network. `speedup_opencl_available()`, `speedup_opencl_device_name()`.
+- **Bitonic merge sort** (`speedup_bitonic_merge_sort_*`): blocks sorted by
+  the bitonic network, then merged, first inside the L2 cache and then across
+  the array, with an AVX2 merge that merges a vector of keys at a time in
+  registers.
+- **Bitonic bucket sort** (`speedup_bitonic_bucket_sort_*`): the sampled bucket
+  sort with every bucket finished by the bitonic network; 32-bit types too.
+- C++: `bitonic_merge_sort`, `bitonic_bucket_sort`. Benchmark entries
+  `bitonic_merge`, `bitonic_bucket`, `bitonic_gpu`; tuning runner
+  `run_sort_benchmarks.py tune031`.
+
+### Fixed
+
+- `speedup/backend/dispatch.h` lacked `extern "C"`, so C++ code calling the
+  dispatch hints did not link.
+
+## [Unreleased]
+
+Sorting, first step: sorts that the standard libraries of C, C++, Java,
+Python, Rust, Go, C# and JavaScript do not ship (`docs/sorting/README.md`).
+
+### Added
+
+- Radix sort (LSD, 8-bit digits, skips digits all keys share) for u32, i32,
+  f32, u64, i64 and f64: `speedup_radix_sort_*`.
+- Bucket sort (sampled equal-depth segments, interpolated buckets) for u64,
+  i64 and f64: `speedup_bucket_sort_*`.
+- Bitonic sort for any n, with an AVX2 kernel chosen at run time:
+  `speedup_bitonic_sort_*`, `speedup_sort_set_simd`.
+- Name sort, a bucket sort for person names, with buckets cut from
+  character-frequency tables for positions 1–3 (US Census data) refined
+  on a sample: `speedup_name_sort`, `speedup_name_sort_ex`,
+  `speedup_name_compare` (`docs/sorting/name-sort.md`).
+- C++17 layer `include/speedup/sort.hpp`, including a stable
+  `radix_sort_by_key` for any movable type.
+- Table generator `codegen/name_tables/build_name_tables.py`, name lists
+  `benchmarks/datasets/names/`, synthetic name lists
+  `benchmarks/datasets/capture_names.py`.
+- Tests `tests/unit/test_sort.c` and `test_sort.cpp`, benchmark
+  `benchmarks/sort/bench_sort.cpp`, results `docs/sorting/results.md` and
+  `benchmarks/outputs/sort_*`.
+- Wiki `docs/wiki/`: Markdown pages built into one self-contained site
+  (`docs/wiki/build_wiki.py`), with search, a C and C++ API reference, a
+  summary of every version, and light and dark modes.
+- Paper `docs/papers/sorting/` (arXiv-ready), with the study runner
+  `benchmarks/scripts/run_sort_benchmarks.py` (main runs, real name lists, an
+  ablation of name sort's design choices) and
+  `benchmarks/scripts/sorting_paper_numbers.py` (every number, table and
+  figure).
+
 ## [0.3.0] - unreleased
 
 Binary search, measured properly. The earlier benchmark drew its keys with

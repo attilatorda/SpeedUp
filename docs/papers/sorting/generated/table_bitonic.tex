@@ -1,0 +1,14 @@
+\begin{tabular}{llrrrrr}
+\toprule
+Compiler & Sort & 1\,Ki & 16\,Ki & 128\,Ki & 1\,Mi & 4\,Mi\\
+\midrule
+GCC, u32 & \texttt{std::sort} & 20.9 & 43.6 & 53.7 & 63.1 & 68.5\\
+ & bitonic, AVX2 & 8.11 & 12.8 & 17.2 & 24.5 & 96.7\\
+ & bitonic, scalar & 21.9 & 34.4 & 45.7 & 60.6 & 141\\
+\midrule
+GCC, u64 & \texttt{std::sort} & 18.7 & 41.2 & 52.4 & 59.7 & 66.8\\
+ & bitonic, AVX2 & 18.5 & 31.0 & 43.4 & 102 & 221\\
+ & bitonic, scalar & 25.7 & 47.0 & 67.2 & 136 & 261\\
+\midrule
+\bottomrule
+\end{tabular}

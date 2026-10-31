@@ -10,3 +10,13 @@ docs/papers/**/*.log
 docs/papers/**/*.out
 docs/papers/**/arxiv/
 docs/papers/build.log
+
+# Personal to-do list, not published
+/TODO.md
+
+# Build trees and downloaded data
+/build*/
+codegen/name_tables/cache/
+
+# Private notes, never published: Linux kernel contribution candidates
+docs/linux-kernel/

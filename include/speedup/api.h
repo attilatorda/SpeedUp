@@ -2,6 +2,7 @@
 #include "speedup/version.h"
 #include "speedup/backend/dispatch.h"
 #include "speedup/algorithms/binary_search.h"
+#include "speedup/algorithms/sort.h"
 #ifdef __cplusplus
 extern "C" {
 #endif

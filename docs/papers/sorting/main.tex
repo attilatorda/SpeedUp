@@ -1,0 +1,694 @@
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{microtype}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[hidelinks]{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{positioning,arrows.meta}
+
+\newtheorem{lemma}{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+
+\input{generated/numbers.tex}
+
+\title{Name Sort: Bucketing Person Names by Character Frequency,\\
+and When MSD Radix Sort Is Enough}
+\author{Attila Torda}
+\date{October 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Person names are far from uniformly distributed: in the 2010 US Census,
+\so{share@M}\,\% of people have a surname beginning with M and
+\so{share@X}\,\% one beginning with X, and single prefixes such as
+\emph{Ma} or \emph{Wil} hold more than one percent each. We ask whether a
+sort can profit from knowing this in advance. \emph{Name sort} is a bucket
+sort whose buckets are cut from character-frequency tables, one per
+position for the first three characters of a name, built from public Census
+data and refined on a small sample of the input. It cuts a trie of at most
+three levels so that each leaf is expected to hold about 32 names, packs the
+leaves into buckets, distributes the names in two linear passes and finishes
+each bucket with insertion sort or MSD radix sort. On a million synthetic
+``Surname Firstname'' names it is \so{syn@gcc@1000000@vsstd}$\times$ faster
+than \texttt{std::sort} and \so{syn@gcc@1000000@vsmsd}$\times$ faster than a
+plain MSD radix sort (GCC; MSVC: \so{syn@msvc@1000000@vsstd}$\times$ and
+\so{syn@msvc@1000000@vsmsd}$\times$). The evaluation is mostly a
+negative-leaning one, though. On English names the frequency tables add
+nothing measurable over the sample alone; deeper tries that cut more even
+buckets are slower; the plan pays only from about \so{abl@cross@names-1m}
+synthetic names; and on the \so{data@surnames} real Census surnames plain MSD
+radix sort is faster. We
+report this together with sorts that the standard libraries of C, C++, Java,
+Python, Rust, Go, C\# and JavaScript do not offer: an LSD radix sort (up to
+\so{num@gcc@u32@uniform@16777216@radix@x}$\times$ faster than
+\texttt{std::sort} on 16\,Mi keys), a sampled bucket sort, an AVX2 bitonic
+sort for any $n$, a bitonic merge sort with an AVX2 merge network
+(\so{h031@u32@uniform@16777216@bitonic_merge@x}$\times$), and a GPU bitonic
+sort through OpenCL (\so{h031@u32@uniform@16777216@bitonic_gpu@x}$\times$,
+copies included), all in an open-source C library with every number in this
+paper regenerated from its benchmark files.
+\end{abstract}
+
+\section{Introduction}
+
+Sorting names is among the most common jobs of everyday software: contact
+lists, member and patient registers, class lists, mailing lists. Library
+sorts treat names as opaque strings and compare them,
+$\Theta(n \log n)$ times, each comparison reading bytes that the previous
+ones have mostly read already. String sorts that inspect characters
+instead---MSD radix sort~\cite{mcilroy1993radix,karkkainen2008radix},
+multikey quicksort~\cite{bentley1997strings},
+burstsort~\cite{sinha2004burstsort}---avoid most of this, but they learn the
+distribution of the characters as they go.
+
+Names, however, have a distribution that is known before the input arrives.
+Public statistics list how many people carry each surname and first
+name~\cite{census2010,census1990}, and the distribution is very uneven
+(Section~\ref{sec:data}). A sort that knows where the dense regions are can
+cut buckets of equal expected size in one step, the idea behind
+samplesort~\cite{frazer1970samplesort,sanders2004superscalar,axtmann2017ips4o}
+and learned sorting~\cite{kristo2020learned}, but with the model fitted on
+millions of real names instead of the input.
+
+This paper reports what that buys. Our contributions are:
+\begin{itemize}
+\item \textbf{Name sort} (Section~\ref{sec:namesort}): a bucket sort whose
+  bucket boundaries come from per-position character-frequency tables of
+  person names, blended with a sample of the input. A small trie of lookup
+  tables distributes the names, and every bucket is finished with a
+  comparison sort or MSD radix sort that skips the bytes its prefix fixes.
+  The order is byte order (UTF-8 code point order) or ASCII-caseless.
+\item \textbf{An evaluation that includes what did not work}
+  (Section~\ref{sec:eval}): synthetic and real name lists, two compilers, and
+  an ablation of every design choice against a plain MSD radix sort measured
+  in the same interleaved runs.
+\item \textbf{Sorts the standard libraries lack}
+  (Section~\ref{sec:numeric}): LSD radix sort, a sampled bucket sort and a
+  bitonic sort for any $n$ with an AVX2 kernel, for integers and
+  floating-point numbers in IEEE~754 total order; and, built on the bitonic
+  network, a bitonic merge sort, a bitonic bucket sort and a GPU bitonic sort
+  (OpenCL) that needs no SDK at build time.
+\item \textbf{Reproducibility}: the library, the tables' generator, the
+  harness and the scripts that produce every number, table and figure of
+  this paper are public (Section~\ref{sec:avail}).
+\end{itemize}
+
+\section{Background}\label{sec:background}
+
+\paragraph{What standard libraries offer.} Every mainstream standard library
+sorts by comparison only (Table~\ref{tab:stdlib}). Radix sort appears in
+add-on libraries such as Boost.Sort~\cite{boostsort} and in GPU
+libraries~\cite{satish2009gpu,merrill2011radix}. A radix-sort path for
+primitive arrays in Java's dual-pivot quicksort has been under review since
+2021~\cite{jdk8266431}; we could not confirm that it has been released.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+Language & Library sort & Algorithm \\
+\midrule
+C & \texttt{qsort} & unspecified (usually introsort or merge sort) \\
+C++ & \texttt{std::sort}, \texttt{std::stable\_sort} & introsort~\cite{musser1997introsort}, merge sort \\
+Java & \texttt{Arrays.sort} & dual-pivot quicksort (primitives), TimSort (objects)~\cite{javaarrays} \\
+Python & \texttt{list.sort} & TimSort~\cite{peters2002listsort} with the Powersort merge policy~\cite{munro2018powersort} \\
+Rust & \texttt{sort}, \texttt{sort\_unstable} & driftsort, ipnsort~\cite{driftsort} \\
+Go & \texttt{slices.Sort} & pattern-defeating quicksort~\cite{go119,peters2021pdqsort} \\
+C\# & \texttt{Array.Sort} & introsort~\cite{dotnetsort} \\
+JavaScript & \texttt{Array.prototype.sort} & TimSort (V8)~\cite{v8sort} \\
+\bottomrule
+\end{tabular}
+\caption{Standard-library sorts. None offers a radix, bucket or bitonic sort;
+Java uses counting sort for \texttt{byte}, \texttt{short} and \texttt{char} arrays.}
+\label{tab:stdlib}
+\end{table}
+
+\paragraph{String sorting.} MSD radix sort distributes strings by their
+first byte into 256 buckets (plus one for strings that end), then recurses
+on each bucket with the next byte~\cite{mcilroy1993radix,knuth1998taocp3}.
+It reads each byte that distinguishes a string from its neighbours about
+once, but every pass pays for a 257-entry count, which dominates on small
+buckets; implementations therefore switch to insertion sort or multikey
+quicksort~\cite{bentley1997strings} below a few dozen strings, and
+cache-conscious variants keep the counts and the moved data
+small~\cite{karkkainen2008radix}. Burstsort~\cite{sinha2004burstsort} builds
+a trie of string prefixes whose leaves are buckets that ``burst'' into
+subtries when they overflow.
+
+\paragraph{Distribution sorts with a model.} Samplesort~\cite{frazer1970samplesort}
+draws a sample, sorts it and uses evenly spaced sample elements as bucket
+boundaries; super scalar samplesort~\cite{sanders2004superscalar} and
+IPS$^4$o~\cite{axtmann2017ips4o} make the classification branch-free and
+in-place. Learned sort~\cite{kristo2020learned} replaces the sample's
+splitters by a model of the key distribution trained on the sample. Name sort
+is a samplesort whose model is a prefix trie with a prior from outside the
+input.
+
+\section{The distribution of names}\label{sec:data}
+
+We use the 2010 US Census list of \so{data@surnames} surnames, each held by
+at least 100 people and covering about \so{data@people} million
+people~\cite{census2010}, and the 1990 Census lists of \so{data@female}
+female and \so{data@male} male first names~\cite{census1990}. Both are in
+the public domain.
+
+The first letter alone is very uneven: weighted by the people who carry them,
+surnames begin with M (\so{share@M}\,\%), S (\so{share@S}\,\%), B
+(\so{share@B}\,\%), C (\so{share@C}\,\%) and H (\so{share@H}\,\%) far more
+often than with Q (\so{share@Q}\,\%), U (\so{share@U}\,\%) or X
+(\so{share@X}\,\%). Equal-width buckets on the first letter would range from
+nearly empty to one tenth of the input. Some prefixes are heavy on their own:
+\emph{Ma} (\so{share@Ma}\,\%), \emph{Ha} (\so{share@Ha}\,\%), \emph{Mc}
+(\so{share@Mc}\,\%), and among three-letter prefixes \emph{Wil}
+(\so{share@Wil}\,\%), \emph{Mar} (\so{share@Mar}\,\%), \emph{Smi}
+(\so{share@Smi}\,\%), \emph{Joh} (\so{share@Joh}\,\%) and \emph{Sch}
+(\so{share@Sch}\,\%). Splitting the heavy first letters on the second and
+third letter is what makes buckets of equal expected size possible.
+
+\paragraph{The tables.} A generator script downloads the lists and computes
+four tables over 257 symbols: symbol 0 is the end of a name, symbol $1+b$ is
+the byte $b$. Table $P_k$, for $k = 1, 2, 3$, gives the share of each symbol
+at position $k$ among the names that reach position $k$ (a name of length
+$k-1$ contributes the end symbol); table $P_\ast$ counts the symbols at every
+position, with one end symbol per name. The names are weighted by the number
+of people who carry them, written in title case as people type them
+(``Smith''), and mixed half surnames, half first names, so that lists of
+either kind and lists of ``Surname Firstname'' are covered. The tables are
+stored in parts per million in a C header (four tables of 257 entries,
+4\,KiB); the generator produces the
+same bytes on every run.
+
+\section{Name sort}\label{sec:namesort}
+
+Name sort sorts an array of $n$ byte strings (pointer and length) in place.
+It has three phases: plan, distribute, finish (Figure~\ref{fig:plan}).
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  blk/.style={draw, minimum height=5mm, inner sep=1.5pt, font=\scriptsize},
+  lab/.style={font=\scriptsize\itshape, text=black!65},
+  >={Stealth[length=1.6mm]}]
+\node[blk, minimum width=9.6cm] (root) at (0,0) {\texttt{end}\quad\dots\quad\texttt{A}\quad\texttt{B}\quad\texttt{C}\quad\dots\quad\texttt{M}\quad\dots\quad\texttt{Q}\quad\dots\quad\texttt{S}\quad\dots\quad\texttt{X}\quad\dots};
+\node[lab, left=1mm of root] {position 1};
+\node[blk, minimum width=6.2cm] (m) at (-1.4,-1.2) {\texttt{end}\quad\dots\quad\texttt{a}\quad\texttt{c}\quad\texttt{e}\quad\dots\quad\texttt{i}\quad\dots\quad\texttt{o}\quad\dots};
+\node[lab, left=1mm of m] {after \texttt{M}};
+\node[blk, minimum width=4.4cm] (ma) at (-2.0,-2.4) {\texttt{end}\quad\dots\quad\texttt{c}\quad\dots\quad\texttt{r}\quad\texttt{s}\quad\dots};
+\node[lab, left=1mm of ma] {after \texttt{Ma}};
+\draw[->] (0.05,-0.25) -- (m.north);
+\draw[->] (-2.75,-1.45) -- (ma.north);
+\node[blk, fill=black!6, minimum width=11cm] (buckets) at (0,-3.6) {bucket 0 \;$|$\; \dots \;$|$\; \texttt{Mac}--\texttt{Mak} \;$|$\; \texttt{Mar} \;$|$\; \dots \;$|$\; \texttt{N}--\texttt{Q} \;$|$\; \dots \;$|$\; last bucket};
+\node[lab, left=1mm of buckets] {buckets};
+\draw[->, dashed] (ma.south) -- (-1.2,-3.35);
+\draw[->, dashed] (3.15,-0.25) .. controls (3.4,-2.2) .. (2.2,-3.35);
+\end{tikzpicture}
+\caption{A name-sort plan (schematic). Each block is a 257-entry lookup
+table for one position. Heavy symbols point to a child block for the next
+position; light ones point to a leaf, and runs of light symbols share one
+leaf. The leaves, in order, are packed into buckets of about 32 expected
+names. A name is classified with at most three lookups.}
+\label{fig:plan}
+\end{figure}
+
+\subsection{Plan}
+
+\paragraph{Sample.} Name sort takes $s = n/128$ names (at least 256, at most
+16{,}384) at even strides and sorts them, with the same MSD radix sort used
+in the finishing phase.
+
+\paragraph{Estimates.} Let $p$ be a prefix of $d$ symbols, expected to hold
+the share $\mu(p)$ of the input, and let the sample hold $s_p$ names with
+prefix $p$, of which $s_{pc}$ continue with symbol $c$. Name sort estimates
+\begin{equation}
+\mu(pc) = \mu(p)\cdot\frac{s_{pc} + \alpha\,\pi_{d+1}(c)}{s_p + \alpha},
+\end{equation}
+where $\pi_{d+1}$ is the prior for position $d+1$: $P_{d+1}$ mixed $99:1$
+with $P_\ast$, so that no byte has probability zero, and $\alpha = 16$ is the
+weight of the prior in sampled names. With many sampled names the sample
+dominates; for prefixes the sample barely sees, the Census tables do. For
+the ASCII-caseless order the priors of A--Z are folded into a--z.
+
+\paragraph{Trie.} The root block is a lookup table with 257 entries, one per
+symbol at position 1. A symbol $c$ whose child is expected to hold more than
+$t = 32$ names ($n\,\mu(pc) > t$), and which the sample has seen at least
+once, gets a child block for the next position, recursively, down to depth
+three. Every other entry points to a leaf, and a light symbol joins the leaf
+of its left neighbour while the two together stay below $t$ expected names,
+so a block needs only a few leaves. The number of blocks is capped at 1{,}024
+(1\,MiB of tables). The leaves, in symbol order, are then packed greedily
+into buckets of about $t$ expected names, and each bucket records the number
+of leading bytes that all its names share: the common prefix of its first
+and last key.
+
+\subsection{Distribute}
+
+One pass walks the trie for every name, at most three table lookups on its
+first three bytes, stores the bucket id and counts the names per bucket; a
+prefix sum and a second pass scatter the (pointer, length) records into a
+buffer. Both passes are linear and read each name's first bytes only.
+
+\subsection{Finish}
+
+Buckets of up to 32 names are sorted by introsort with insertion sort for
+small ranges~\cite{musser1997introsort}; larger buckets by MSD radix sort
+with an explicit stack, falling back to introsort below 32 names. Both start
+comparing after the bucket's shared prefix. A bucket the plan misjudged, such
+as one holding every \emph{Smith} of a long list, thus costs time linear in
+the bytes that distinguish its names, not quadratic.
+
+Below $n_0 = 131{,}072$ names name sort does not plan at all and runs its MSD
+radix sort on the whole input; Section~\ref{sec:ablation} shows why.
+
+\subsection{Order and correctness}
+
+The default order is byte order, \texttt{memcmp} with the shorter name first
+on a tie, which for UTF-8 is code point order. With the caseless flag, A--Z
+compare as a--z and names equal up to case are ordered by their bytes. Both
+are total orders.
+
+\begin{lemma}
+If name $a$ precedes name $b$ in the sort order, then $a$'s bucket is not
+after $b$'s, and all names in a bucket agree on the bucket's shared prefix.
+\end{lemma}
+\begin{proof}[Proof sketch]
+The trie classifies a name by its first (at most three) symbols, folded in
+the caseless order, and its blocks are indexed by symbol, so the leaf order
+is the order of those prefixes, with the end symbol first. Packing preserves
+leaf order, so the bucket id is a monotone function of the name, which
+proves the first claim. A bucket covers a contiguous range of keys between
+its first leaf's lowest and its last leaf's highest prefix, so every name in
+it starts with the common prefix of those two. Names equal up to case have
+the same folded symbols and land in the same bucket, where the byte
+tie-break orders them.
+\end{proof}
+
+\subsection{Cost}
+
+Planning sorts $s \le n/128$ names and fills at most 1{,}024 blocks of 257
+entries; distribution is two linear passes. The finishing cost is that of
+the bucket sorts: at most a $32\times32$ insertion sort per small bucket, and
+for a large bucket an MSD radix sort, linear in the distinguishing bytes plus
+a 257-entry count per pass. Memory beyond the input is one record and one
+bucket id per name ($n \times 20$ bytes on 64-bit systems) plus the tables.
+
+\subsection{Unicode and collation}
+
+Because name sort works on bytes, any UTF-8 input sorts correctly in code
+point order; a multi-byte character simply takes more trie positions, and
+the sample supplies the statistics the ASCII-only Census tables lack.
+Language-specific order (Hungarian \emph{cs} after \emph{c}, German \"a with
+a) is a collation question~\cite{uts10}: the caller turns each name into a
+collation key, a byte string whose byte order is the locale's order, and
+name-sorts the keys. The tables then no longer apply and the sample does all
+the work; Section~\ref{sec:real} measures that situation on multilingual
+input.
+
+\section{Sorts the standard libraries lack}\label{sec:numeric}
+
+All three sort 32- and 64-bit unsigned and signed integers and
+floating-point numbers, by sorting unsigned keys: signed integers flip the
+sign bit, floating-point numbers flip the sign bit of positive values and all
+bits of negative ones. The result is IEEE~754 totalOrder~\cite{ieee754}
+($-\mathrm{NaN} < -\infty < \dots < -0 < +0 < \dots < +\infty <
++\mathrm{NaN}$); bits are moved, never changed, so NaN payloads survive.
+Every function takes an optional scratch buffer and falls back to an in-place
+introsort if an allocation fails.
+
+\paragraph{LSD radix sort.} Eight-bit digits. One read pass encodes the keys
+and builds the histograms of all digits at once; a digit on which all keys
+agree is skipped, so small values, few distinct values and shared high bytes
+cost fewer passes~\cite{knuth1998taocp3}. Keys move between the array and the
+buffer once per remaining digit, and the last copy back decodes. Below 256
+keys it falls back to introsort.
+
+\paragraph{Bucket sort.} Classic bucket sort cuts $[\min, \max]$ into
+equal-width buckets and works for uniform data only. Ours sorts a strided
+sample of 1{,}024 keys, takes 64 equal-depth splitters from it, and cuts
+every segment between two splitters into equal-width buckets of about 32
+expected keys. A branch-free binary search finds the segment, a
+multiplication the bucket; the map is monotone, so after a counting pass, a
+scatter pass and an introsort per bucket the data is sorted, and a
+misjudged bucket only costs a larger introsort.
+
+\paragraph{Bitonic sort for any $n$.} Batcher's bitonic
+network~\cite{batcher1968networks} sorts $2^k$ keys with
+$O(n \log^2 n)$ compare-exchanges in a fixed pattern, which suits SIMD
+units and GPUs~\cite{chhugani2008simd,satish2009gpu}. We use the formulation
+in which every comparator puts the smaller key at the lower index: for each
+block size $k = 2, 4, \dots$ a \emph{flip} stage compares $i$ with
+$i \oplus (k-1)$, and half-cleaner stages compare $i$ with $i + j$ for
+$j = k/4, \dots, 1$. Picture the array padded to the next power of two with
+$+\infty$: a comparator whose upper index lies in the padding compares
+against $+\infty$ and never moves anything, so it can be skipped, and the
+network sorts any $n$ exactly, without padding memory. The AVX2 kernel,
+selected at run time, compares contiguous ranges of 8 (32-bit) or 4 (64-bit)
+keys with vector min/max, reverses the mirrored half of a flip stage in a
+register, and runs all distances below one vector width in registers between
+one load and one store. AVX2 has no unsigned 64-bit comparison; we compare
+with the sign bits flipped.
+
+\section{Method}\label{sec:method}
+
+\paragraph{Machine and compilers.} An AMD Ryzen 5 2600X (Zen+, 6 cores,
+32\,KiB L1d and 512\,KiB L2 per core, 2$\times$8\,MiB L3) with 16\,GB of
+DDR4 under Windows 10 (build 19045), the machine of our earlier
+studies. MinGW-w64 GCC 13.2 and Microsoft Visual C++ 19.41 (Visual
+Studio 2022), CMake Release builds (\texttt{-O3} and \texttt{/O2}); the AVX2
+kernels alone are compiled with \texttt{-mavx2} or \texttt{/arch:AVX2}. The
+GPU is an NVIDIA GeForce GTX 1660 SUPER (6\,GB, driver 576.02) on PCIe~3.0,
+used through OpenCL; the library loads the OpenCL runtime when it first needs
+it, and the timings include copying the keys to the GPU and back.
+
+\paragraph{Timing.} For each input, every algorithm first runs once
+untimed and its result is compared with \texttt{std::sort}'s. Then the timed
+runs of all algorithms are interleaved round-robin, so that slow periods of
+the machine affect them alike~\cite{mytkowicz2009wrongdata,hoefler2015benchmarking};
+each run sorts a fresh copy of the input, and the copy is not timed. We
+report the median of 7 runs (9 in the ablation) in nanoseconds per element,
+with the interquartile range in the figures. The thread is pinned to one core
+and runs at high priority. Separate runs of the same configuration differed
+by up to about 15\,\% in exploratory runs, so we compare algorithms only
+within one run, and the ablation measures the MSD radix baseline in every
+run.
+
+\paragraph{Baselines.} \texttt{std::sort} (introsort), and for names a plain
+MSD radix sort on string views: 257 buckets per level and insertion sort
+below 32 names, without plan or sample. For numbers also
+\texttt{std::stable\_sort} and \texttt{qsort}.
+
+\paragraph{Name lists.} \emph{Synthetic}: ``Surname Firstname'' pairs, each
+part drawn independently by its Census frequency, $10^6$ names; the sizes
+below $10^6$ are prefixes of the list. Its names are real, its pairs and its
+frequencies are realistic, but it is drawn from the data the tables were
+built from, which favours the tables. \emph{Census}: the \so{data@surnames}
+Census surnames themselves, each once, in five orders: shuffled, popularity
+order (as published), sorted, reversed, and in upper case as the Census
+writes them. \emph{Multilingual}: $10^6$ file-name-like strings built from 47
+words in 15 scripts (Czech, German, Polish, Turkish, Greek, Cyrillic, Chinese,
+Japanese, Korean, Arabic, Hebrew, Thai and others), 79\,\% of them with
+non-ASCII characters; it tests the byte-level path where the tables know
+nothing.
+
+\paragraph{Numeric inputs.} $2^{10}$ to $2^{24}$ keys: uniform, skewed
+(log-normal, $\mu = 10$, $\sigma = 2.5$), sorted, and few-unique (16
+values). Bitonic sort is measured up to $2^{22}$.
+
+\paragraph{Correctness.} Every timed result matched \texttt{std::sort}
+(\so{num@gcc@allok} numeric results with GCC, \so{num@msvc@allok} with MSVC).
+Besides, the unit tests compare every sort with \texttt{qsort} bit for bit on
+all sizes up to 1{,}025 and on special floating-point values, and name sort in
+both orders on adversarial inputs (shared prefixes of 300 bytes, embedded NUL
+bytes, empty names, UTF-8); every real list was also sorted in the caseless
+order and checked (\so{real@allok} correct).
+
+\section{Evaluation}\label{sec:eval}
+
+\subsection{Synthetic names}
+
+\begin{table}[t]
+\centering
+\small
+\resizebox{\linewidth}{!}{\input{generated/table_names.tex}}
+\caption{Synthetic ``Surname Firstname'' lists: ns per name, median of 7.
+Below 131{,}072 names, name sort is its MSD radix sort without a plan.}
+\label{tab:names}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/names_gcc.pdf}
+\caption{Synthetic names, GCC. The dashed line is name sort planning at
+every size (ablation run; its own MSD baseline is in
+Table~\ref{tab:ablation}); the library plans from 131{,}072 names on.}
+\label{fig:names}
+\end{figure}
+
+Table~\ref{tab:names} and Figure~\ref{fig:names} show the synthetic lists.
+At $10^6$ names, name sort takes \so{syn@gcc@1000000@ns}\,ns per name, against
+\so{syn@gcc@1000000@std} for \texttt{std::sort} and \so{syn@gcc@1000000@msd}
+for plain MSD radix sort (GCC); with MSVC \so{syn@msvc@1000000@ns},
+\so{syn@msvc@1000000@std} and \so{syn@msvc@1000000@msd}. The plan cut
+\so{syn@gcc@1000000@buckets} buckets with a mean of \so{syn@gcc@1000000@mean}
+names; the largest held \so{syn@gcc@1000000@largest} names (the common
+surnames, which share their first three letters), the standard deviation of
+the bucket sizes was \so{syn@gcc@1000000@sd}, and MSD radix sort finished
+those buckets. Below the planning threshold name sort is an MSD radix sort;
+at $10^4$ names it is \so{syn@gcc@10000@vsstd}$\times$ faster than
+\texttt{std::sort} (MSVC: \so{syn@msvc@10000@vsstd}$\times$).
+
+\subsection{Ablation}\label{sec:ablation}
+
+\begin{table}[t]
+\centering
+\small
+\resizebox{\linewidth}{!}{\input{generated/table_ablation.tex}}
+\caption{Name sort with one design choice changed at a time, at the full
+list size ($10^6$ synthetic, \so{data@surnames} Census shuffled, $10^6$
+multilingual names), GCC, median of 9. ``vs.\ MSD'': plain MSD radix sort's
+time divided by name sort's in the same run (above $1$: name sort is
+faster).}
+\label{tab:ablation}
+\end{table}
+
+Table~\ref{tab:ablation} changes one choice at a time.
+
+\paragraph{Depth.} A deeper trie cuts more and more even buckets: at
+$10^6$ synthetic names, depth 8 cuts \so{abl@depth8@names-1m@buckets} buckets
+whose largest holds \so{abl@depth8@names-1m@largest} names, against
+\so{abl@default@names-1m@buckets} and \so{abl@default@names-1m@largest} at
+depth 3. But it is slower: \so{abl@depth4@names-1m@ns} (depth 4) and
+\so{abl@depth8@names-1m@ns} (depth 8) against \so{abl@default@names-1m@ns}\,ns
+per name. Each level is another lookup in a 1\,KiB block, and with thousands
+of blocks those lookups miss the cache; an MSD radix sort of a large bucket
+is cheaper than the deeper trie that would have avoided it. The Census
+surnames show the same (\so{abl@depth8@census-shuffled@ns} against
+\so{abl@default@census-shuffled@ns}\,ns); on the multilingual list, whose few
+distinct words leave little to split, depth makes little difference. Two levels
+cost about the same as three on the synthetic list
+(\so{abl@depth2@names-1m@ns}\,ns) and are slightly faster on the short Census
+surnames (\so{abl@depth2@census-shuffled@ns}\,ns), where the third level
+rarely finds anything heavy enough to split.
+
+\paragraph{The frequency tables.} This is the central question. On the
+two lists of English names the answer is that the tables add nothing
+measurable. Without them (prior weight 0), name sort takes
+\so{abl@sample-only@names-1m@ns} and \so{abl@sample-only@census-shuffled@ns}\,ns
+per name on the synthetic and Census lists; with them, the default,
+\so{abl@default@names-1m@ns} and \so{abl@default@census-shuffled@ns}; with the
+tables alone (prior weight $10^9$), \so{abl@tables-only@names-1m@ns} and
+\so{abl@tables-only@census-shuffled@ns}. These are within about 5\,\% of each
+other, inside the run-to-run noise: the sample of $n/128$ names finds the
+heavy prefixes by itself, even on the synthetic list, which was drawn from the
+same Census data as the tables. On the multilingual list the three settings
+differ: \so{abl@default@intl-1m@ns}\,ns for the blend,
+\so{abl@sample-only@intl-1m@ns} for the sample alone and
+\so{abl@tables-only@intl-1m@ns} for the tables alone. The ASCII tables alone
+put the boundaries in the wrong places there. That the blend still beats the
+sample alone is not knowledge about names. Its any-position table gives every
+byte a little probability mass, which smooths the estimates for prefixes the
+sample saw only once or twice. A uniform prior would likely do the same. The
+name-frequency tables could still matter where no sample is affordable, for
+example for input that arrives as a stream.
+
+\paragraph{Finishing and sample size.} Finishing buckets of up to 256
+names by introsort instead of MSD radix sort costs
+\so{abl@introsort-buckets@names-1m@ns} against \so{abl@default@names-1m@ns}\,ns
+per name (synthetic) and \so{abl@introsort-buckets@census-shuffled@ns} against
+\so{abl@default@census-shuffled@ns} (Census): on names, even small buckets
+are better sorted byte by byte. A larger sample ($n/16$) does not cut better
+buckets and costs \so{abl@sample16@names-1m@ns}\,ns per name.
+
+\paragraph{Where planning starts to pay.} With the threshold removed,
+name sort plans at every size (dashed in Figure~\ref{fig:names}). Measured
+against plain MSD radix sort in the same run, it stays faster from
+\so{abl@cross@names-1m} synthetic names on, and from \so{abl@cross@intl-1m}
+multilingual names on; on the \so{data@surnames} Census surnames it never
+does. Where planning starts to pay thus
+depends on the names: on long ``Surname Firstname'' strings from about half a
+million, on the multilingual list, whose names share long prefixes, already
+from tens of thousands, and on short unique surnames not at all. The library's
+fixed threshold of 131{,}072 names came from exploratory runs and fits none of
+the three well; a threshold derived from the sample (average name length, how
+many names share their first bytes) would be the better design.
+
+\subsection{Real name lists}\label{sec:real}
+
+\begin{table}[t]
+\centering
+\small
+\resizebox{\linewidth}{!}{\input{generated/table_real.tex}}
+\caption{Real name lists at full size, ns per name, median of 7; the faster of
+MSD radix sort and name sort in bold.}
+\label{tab:real}
+\end{table}
+
+Table~\ref{tab:real} shows the real lists. Every list sorted correctly in
+both orders. On the Census surnames name sort is
+\so{real@gcc@census@vsstdmin}--\so{real@gcc@census@vsstdmax}$\times$ faster
+than \texttt{std::sort} (GCC), but plain MSD radix sort is faster still on
+most orders. The surnames are short and unique, so MSD radix sort separates
+them in two or three cheap passes, and the plan's sample and trie are pure
+overhead at this size. Input order makes no qualitative difference: sorted,
+reversed and popularity-ordered lists behave like the shuffled one, and the
+upper-case list, which the title-case priors do not describe, does not
+suffer. On the multilingual list, where 79\,\% of the names contain non-ASCII
+bytes, name sort is \so{real@gcc@intl-1m@vsstd}$\times$ faster than
+\texttt{std::sort} and \so{real@gcc@intl-1m@vsmsd}$\times$ faster than MSD
+radix sort (MSVC: \so{real@msvc@intl-1m@vsstd}$\times$ and
+\so{real@msvc@intl-1m@vsmsd}$\times$). The sample handles input the tables
+know nothing about.
+
+\subsection{Numeric sorts}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/numeric_gcc.pdf}
+\caption{Numeric sorts, GCC: ns per element, median and interquartile range.}
+\label{fig:numeric}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\small
+\resizebox{\linewidth}{!}{\input{generated/table_numeric.tex}}
+\caption{Numeric sorts at $2^{24}$ keys: \texttt{std::sort} in ns per element,
+radix and bucket sort as speed-up over it (above $1$: faster).}
+\label{tab:numeric}
+\end{table}
+
+Figure~\ref{fig:numeric} and Table~\ref{tab:numeric} show the numeric
+sorts. At $2^{24}$ uniform keys, radix sort is
+\so{num@gcc@u32@uniform@16777216@radix@x}$\times$ (u32),
+\so{num@gcc@u64@uniform@16777216@radix@x}$\times$ (u64) and
+\so{num@gcc@f64@uniform@16777216@radix@x}$\times$ (f64) faster than
+\texttt{std::sort} with GCC, and \so{num@msvc@u32@uniform@16777216@radix@x},
+\so{num@msvc@u64@uniform@16777216@radix@x} and
+\so{num@msvc@f64@uniform@16777216@radix@x}$\times$ with MSVC; skewed and
+few-unique data keep most of that. It loses on sorted input
+(\so{num@gcc@u64@sorted@16777216@radix@x}$\times$ for u64), which introsort's
+partitioning handles in a fraction of the random case while radix sort still
+moves every key; a check for sorted runs would remove that case. Bucket sort
+is about level with \texttt{std::sort} on random data with GCC
+(\so{num@gcc@f64@uniform@16777216@bucket@x}$\times$ for f64) and somewhat faster
+with MSVC (\so{num@msvc@f64@uniform@16777216@bucket@x}$\times$), and loses on
+sorted and few-unique data: the per-bucket introsort is what it saves, and
+introsort is fast on 32 keys. The AVX2 bitonic sort beats \texttt{std::sort}
+on u32 keys up to \so{num@gcc@u32@bitonic@winsupto} keys, while they fit in
+the caches; beyond that its $O(n \log^2 n)$ passes over memory lose, as
+expected. The AVX2 kernel is what makes it competitive: at $2^{17}$ keys it is
+\so{bit@gcc@u32@131072@simdx}$\times$ faster than the scalar network on u32
+keys and \so{bit@gcc@u64@131072@simdx}$\times$ on u64 keys, whose vectors
+hold half as many keys.
+
+\paragraph{Bitonic hybrids and a GPU.} A separate GCC run
+(Table~\ref{tab:hybrids}) measures three uses of the bitonic network that the
+library added after the main study. \emph{Bitonic merge sort} sorts blocks of
+128 keys by the network and merges the runs with an AVX2 merge network that
+merges a vector of keys at a time~\cite{chhugani2008simd}, first inside the
+L2 cache, then across memory. On u32 keys it is
+\so{h031@u32@uniform@16777216@bitonic_merge@x}$\times$ faster than
+\texttt{std::sort} at $2^{24}$ keys and \so{h031@u32@uniform@65536@bitonic_merge@x}$\times$
+at $2^{16}$; on 64-bit keys, with half the lanes per vector,
+\so{h031@u64@uniform@16777216@bitonic_merge@x}$\times$. \emph{Bitonic bucket
+sort} finishes the buckets of bucket sort with the network instead of
+introsort. No bucket size from 32 to 1{,}024 made it competitive
+(\so{h031@u32@uniform@16777216@bitonic_bucket@x}$\times$ on u32 at $2^{24}$):
+scattering into thousands of buckets costs more than the networks save.
+\emph{Bitonic sort on a GPU}, an NVIDIA GeForce GTX 1660 SUPER through
+OpenCL, sorts blocks of 1{,}024 keys in local memory and finishes with global
+and local merge stages. How fast it is depends on how often it runs.
+Interleaved with the CPU sorts, as in Table~\ref{tab:hybrids}, the GPU idles
+for up to a second between its runs and lowers its clocks; runs of a few
+milliseconds then finish before the clocks are back up, and at sizes between
+about $2^{20}$ and $2^{22}$ keys its median is several times worse than its
+best runs. Even so it is \so{h031@u32@uniform@16777216@bitonic_gpu@x}$\times$
+faster than \texttt{std::sort} on $2^{24}$ u32 keys. Run back to back, the
+GPU's times are steady: \so{warm@u32@16777216}\,ns per key at $2^{24}$ u32 keys
+(\so{warm@u32@16777216@x}$\times$ faster than \texttt{std::sort}) and
+\so{warm@u64@16777216}\,ns at $2^{24}$ u64 keys
+(\so{warm@u64@16777216@x}$\times$), copies included, and it is faster than
+every CPU sort in the study from \so{warm@u32@from} u32 keys and
+\so{warm@u64@from} u64 keys on. The library sends bitonic sorts to the GPU by
+default from 65{,}536 keys on, a margin for a GPU that has to clock up first.
+
+\begin{table}[t]
+\centering
+\small
+\resizebox{\linewidth}{!}{\input{generated/table_031.tex}}
+\caption{Bitonic hybrids and the GPU (one GCC run; all results
+\so{h031@allok} correct): speed-up over \texttt{std::sort} in the same run.
+The GPU times include the copies to and from the device.}
+\label{tab:hybrids}
+\end{table}
+
+\section{Threats to validity}
+
+All measurements come from one machine; processors with a larger last-level
+cache or more memory bandwidth will move the points where planning, radix
+sort and bitonic sort start or stop paying. The synthetic names are drawn
+from the data the priors were built from, which favours the priors; the
+ablation shows that even so they do not matter measurably. The Census list
+holds each surname once, while a real register repeats common names, which
+favours MSD radix sort less than our Census list does and the plan more.
+We had no real list of people from outside the United States; the
+multilingual list consists of words, not names. The baselines are one
+implementation each; a tuned string sort such as the one of
+K\"arkk\"ainen and Rantala~\cite{karkkainen2008radix} would be a stronger
+baseline than our plain MSD radix sort, and would likely narrow name sort's
+lead on large inputs. The GPU also drives the machine's display, and its times
+are the least stable in this study: between repetitions of the same
+configuration they can differ several-fold, which we attribute to the
+display and to the GPU's power states. We report medians, and the copies to
+and from the device are always included; a GPU that only computes, or data
+that stays on the device, would be faster. Finally, all CPU times are
+single-threaded.
+
+\section{Conclusion}
+
+Person names are unevenly distributed, and a bucket sort that cuts its
+buckets from the distribution of their first three letters is fast: about
+$3\times$ faster than \texttt{std::sort} on a million names, and faster than
+a plain MSD radix sort on long or non-English names. But the evaluation
+attributes that speed to the bucket structure and the MSD radix sort that
+finishes it, not to knowing the distribution in advance: a small sample of
+the input finds the same boundaries as Census frequency tables, deeper and
+more even plans are slower, and on short, unique surnames a plain MSD radix
+sort is better. A distribution model fitted outside the input, the idea that
+motivated name sort, did not pay on this hardware.
+
+The numeric sorts confirm that the standard libraries leave speed on the
+table for large arrays of plain keys: LSD radix sort, the AVX2 bitonic merge
+sort and, where a GPU is available, a bitonic sort on the GPU are several
+times faster than introsort. All of it, including the negative results, is
+reproducible from the published library, data and scripts.
+
+\section*{Availability}\label{sec:avail}
+
+The library (C ABI and a C++17 layer), the table generator, the benchmark
+harness, the raw results and the scripts that produce every figure, table and
+number in this paper are at \url{https://github.com/attilatorda/SpeedUp}
+(AGPL-3.0):
+\begin{itemize}
+\item sorts: \nolinkurl{src/algorithms/sort/}, API \nolinkurl{include/speedup/algorithms/sort.h};
+\item tables: \nolinkurl{codegen/name_tables/build_name_tables.py};
+\item harness: \nolinkurl{benchmarks/sort/bench_sort.cpp};
+\item runner: \nolinkurl{benchmarks/scripts/run_sort_benchmarks.py};
+\item results: \nolinkurl{benchmarks/outputs/sort_*.csv} and \nolinkurl{namesort_*.csv};
+\item figures, tables and numbers: \nolinkurl{benchmarks/scripts/sorting_paper_numbers.py}.
+\end{itemize}
+
+\bibliographystyle{plainnat}
+\bibliography{refs}
+
+\end{document}

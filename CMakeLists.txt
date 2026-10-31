@@ -45,6 +45,13 @@ add_library(speedup
     src/backends/gpu/common/gpu_backend_common.c
     src/backends/gpu/cuda/cuda_runtime_check.c
     src/backends/gpu/opencl/opencl_runtime_check.c
+    src/algorithms/sort/radix_sort.c
+    src/algorithms/sort/bucket_sort.c
+    src/algorithms/sort/bitonic_sort.c
+    src/algorithms/sort/name_sort.c
+    src/algorithms/sort/sort_dispatch.c
+    src/algorithms/sort/bitonic_merge_sort.c
+    src/algorithms/sort/bitonic_bucket_sort.c
 )
 
 target_include_directories(speedup
@@ -53,10 +60,41 @@ target_include_directories(speedup
         ${CMAKE_CURRENT_BINARY_DIR}/generated
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/binary_search
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/algorithms/sort
 )
+if(UNIX)
+    target_link_libraries(speedup PRIVATE m)
+endif()
+# OpenCL GPU path for bitonic sort: the ICD loader is opened at run time,
+# so this needs no OpenCL SDK (src/backends/gpu/opencl/opencl_api.h).
+if(SPEEDUP_ENABLE_OPENCL)
+    target_sources(speedup PRIVATE src/backends/gpu/opencl/bitonic_opencl.c)
+    target_compile_definitions(speedup PRIVATE SPEEDUP_SORT_HAVE_OPENCL)
+    target_include_directories(speedup PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src/backends/gpu/opencl)
+    target_link_libraries(speedup PRIVATE ${CMAKE_DL_LIBS})
+endif()
+
+# AVX2 sort kernels: built with AVX2 enabled for this file only, called
+# after a run-time CPU check (src/algorithms/sort/sort_dispatch.c).
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|x86_64|amd64)$" AND CMAKE_SIZEOF_VOID_P EQUAL 8)
+    target_sources(speedup PRIVATE src/algorithms/sort/bitonic_sort_avx2.c)
+    if(MSVC)
+        set_source_files_properties(src/algorithms/sort/bitonic_sort_avx2.c PROPERTIES COMPILE_OPTIONS "/arch:AVX2")
+    else()
+        set_source_files_properties(src/algorithms/sort/bitonic_sort_avx2.c PROPERTIES COMPILE_OPTIONS "-mavx2")
+    endif()
+    target_compile_definitions(speedup PRIVATE SPEEDUP_SORT_HAVE_AVX2)
+endif()
 
 add_executable(speedup_binary_search_test tests/unit/test_binary_search.c)
 target_link_libraries(speedup_binary_search_test PRIVATE speedup)
+
+add_executable(speedup_sort_test tests/unit/test_sort.c)
+target_link_libraries(speedup_sort_test PRIVATE speedup)
+
+# Sorting: C++17 layer over the C ABI (include/speedup/sort.hpp)
+add_executable(speedup_sort_cpp_test tests/unit/test_sort.cpp)
+target_link_libraries(speedup_sort_cpp_test PRIVATE speedup speedup_bucketization)
 
 # Bucketization: header-only C++17 interface (include/speedup/bucketization.hpp)
 add_library(speedup_bucketization INTERFACE)
@@ -134,6 +172,11 @@ if(SPEEDUP_BUILD_BENCHMARKS)
     add_executable(speedup_bench_bsearch benchmarks/binary_search/bench_bsearch.cpp)
     target_include_directories(speedup_bench_bsearch PRIVATE src/algorithms/binary_search)
     target_link_libraries(speedup_bench_bsearch PRIVATE speedup)
+
+    # Sorting study (benchmarks/sort): the new sorts against the standard library.
+    add_executable(speedup_bench_sort benchmarks/sort/bench_sort.cpp)
+    target_link_libraries(speedup_bench_sort PRIVATE speedup speedup_bucketization)
+    target_compile_definitions(speedup_bench_sort PRIVATE SPEEDUP_SORT_BENCH_HYBRIDS)
 endif()
 
 if(WIN32 AND SPEEDUP_BUILD_BENCHMARKS AND SPEEDUP_ENABLE_ASM AND CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -159,3 +202,5 @@ endif()
 enable_testing()
 add_test(NAME speedup_binary_search_test COMMAND speedup_binary_search_test)
 add_test(NAME speedup_bucketization_test COMMAND speedup_bucketization_test)
+add_test(NAME speedup_sort_test COMMAND speedup_sort_test)
+add_test(NAME speedup_sort_cpp_test COMMAND speedup_sort_cpp_test)
